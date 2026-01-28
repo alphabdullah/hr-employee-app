@@ -1,0 +1,1853 @@
+{
+	"info": {
+		"_postman_id": "4526583f-8a61-4269-bfbe-e396833d380f",
+		"name": " New HR App Backend API",
+		"description": "Complete API collection for HR App Backend - Employee Management System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28590643"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register Employee",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"employee_id\", jsonData.employee.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone_number\": \"+1234567890\",\n    \"residential_address\": \"123 Main Street, City, State, 12345\",\n    \"skills\": [\"PHP\", \"Laravel\", \"MySQL\", \"JavaScript\"],\n    \"password\": \"Pass@123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						},
+						"description": "Register a new employee account.\n\n**Required Fields:**\n- full_name (string)\n- email (string, unique)\n- phone_number (string)\n- residential_address (string)\n- skills (array, min: 1, max: 8)\n- password (string, max 8 chars, must contain uppercase, lowercase, digit, special char)\n\n**Password Rules:**\n- At least 1 uppercase letter\n- At least 1 lowercase letter\n- At least 1 numeric digit\n- At least 1 special character (@$!%*?&#)\n- Maximum 8 characters"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    pm.environment.set(\"employee_id\", jsonData.employee.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"Pass@123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"login"
+							]
+						},
+						"description": "Login with email and password. Returns an authentication token."
+					},
+					"response": []
+				},
+				{
+					"name": "Login Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    pm.environment.set(\"employee_id\", jsonData.employee.id);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@hr-app.com\",\n    \"password\": \"Admin@123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"login"
+							]
+						},
+						"description": "Login with email and password. Returns an authentication token."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"logout"
+							]
+						},
+						"description": "Logout and invalidate the current authentication token. Requires authentication."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for employee registration and login"
+		},
+		{
+			"name": "Email Verification",
+			"item": [
+				{
+					"name": "Verify Email",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/email/verify/:id/:hash",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"email",
+								"verify",
+								":id",
+								":hash"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Employee ID"
+								},
+								{
+									"key": "hash",
+									"value": "verification_hash_here",
+									"description": "Email verification hash"
+								}
+							]
+						},
+						"description": "Verify employee email address using the link sent in verification email.\n\n**Note:** This link is typically accessed from the email sent after registration."
+					},
+					"response": []
+				},
+				{
+					"name": "Resend Verification Email",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/email/verification-notification",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"email",
+								"verification-notification"
+							]
+						},
+						"description": "Resend email verification link. Requires authentication."
+					},
+					"response": []
+				}
+			],
+			"description": "Email verification endpoints"
+		},
+		{
+			"name": "Password Reset",
+			"item": [
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john.doe@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"forgot-password"
+							]
+						},
+						"description": "Request a password reset link. The link will be sent to the registered email address.\n\n**Note:** Check your email (or logs if using log driver) for the reset link."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"token\": \"reset_token_from_email\",\n    \"password\": \"New@123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reset-password"
+							]
+						},
+						"description": "Reset password using the token received in email.\n\n**Required Fields:**\n- email (string)\n- token (string, from email)\n- password (string, must follow password rules)\n\n**Password Rules:**\n- At least 1 uppercase letter\n- At least 1 lowercase letter\n- At least 1 numeric digit\n- At least 1 special character (@$!%*?&#)\n- Maximum 8 characters"
+					},
+					"response": []
+				}
+			],
+			"description": "Password reset endpoints"
+		},
+		{
+			"name": "Profile Management",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						},
+						"description": "Get the authenticated employee's profile information. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile (JSON)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"John Updated Doe\",\n    \"email\": \"john.updated@example.com\",\n    \"skills\": [\"PHP\", \"Laravel\", \"MySQL\", \"JavaScript\", \"Vue.js\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						},
+						"description": "Update profile information (without image). All fields are optional.\n\n**Updatable Fields:**\n- full_name (string)\n- email (string, must remain unique)\n- skills (array, min: 1, max: 8)\n\n**Note:** Skills list replaces old values, it does not append."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile with Image",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "full_name",
+									"value": "John Updated Doe",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "john.updated@example.com",
+									"type": "text"
+								},
+								{
+									"key": "skills",
+									"value": "[\"PHP\", \"Laravel\", \"MySQL\", \"JavaScript\"]",
+									"description": "JSON array as string",
+									"type": "text"
+								},
+								{
+									"key": "profile_image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"profile"
+							]
+						},
+						"description": "Update profile with profile image upload.\n\n**File Requirements:**\n- Image file (jpeg, png, jpg, gif)\n- Maximum size: 2MB\n\n**Note:** Use form-data body type for file uploads."
+					},
+					"response": []
+				}
+			],
+			"description": "Profile management endpoints for viewing and updating employee profile"
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Admin Dashboard",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/dashboard",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"dashboard"
+							]
+						},
+						"description": "Get admin dashboard with statistics. Requires admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Employees",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/employees?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"employees"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15"
+								}
+							]
+						},
+						"description": "Get all employees (users only). Supports pagination. Requires admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Employee by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/employees/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"employees",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Employee ID"
+								}
+							]
+						},
+						"description": "Get a specific employee by ID. Requires admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Employee",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"Updated Name\",\n    \"email\": \"updated@example.com\",\n    \"phone_number\": \"+9876543210\",\n    \"residential_address\": \"New Address\",\n    \"skills\": [\"PHP\", \"Laravel\", \"Vue.js\"],\n    \"status\": \"Active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api/employees/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"employees",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Employee ID"
+								}
+							]
+						},
+						"description": "Update employee details. All fields are optional. Requires admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Employee Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"Active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api/employees/:id/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"employees",
+								":id",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Employee ID"
+								}
+							]
+						},
+						"description": "Update employee status. Can change from Active to Inactive or from Inactive to Active.\n\n**Status Values:**\n- \"Active\" - Activate employee account\n- \"Inactive\" - Deactivate employee account\n\n**Examples:**\n- To activate: `{\"status\": \"Active\"}`\n- To deactivate: `{\"status\": \"Inactive\"}`\n\nRequires admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Employee",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/employees/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"employees",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Employee ID"
+								}
+							]
+						},
+						"description": "Delete an employee. Requires admin role."
+					},
+					"response": []
+				}
+			],
+			"description": "Admin endpoints for managing employees. Requires admin role."
+		},
+		{
+			"name": "Jobs",
+			"item": [
+				{
+					"name": "Get All Jobs",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/jobs?status=Open&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"jobs"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "Open",
+									"description": "Filter by status: Open, Closed, Filled"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get all jobs visible to employees. Only shows 'Open' jobs by default. Jobs with status 'Filled' are never displayed. Supports pagination and status filtering (Open/Closed only). Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Job by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/jobs/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"jobs",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Get a specific job by ID. Only accessible if job status is not 'Filled'. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Job (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "job_title",
+									"value": "Senior PHP Developer",
+									"type": "text"
+								},
+								{
+									"key": "job_description",
+									"value": "We are looking for an experienced PHP developer to join our team.",
+									"type": "text"
+								},
+								{
+									"key": "required_skills",
+									"value": "[\"PHP\", \"Laravel\", \"MySQL\"]",
+									"description": "Array of required skills (JSON string)",
+									"type": "text"
+								},
+								{
+									"key": "number_of_workers_required",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "job_location",
+									"value": "New York, NY",
+									"type": "text"
+								},
+								{
+									"key": "duration_start_time",
+									"value": "09:00",
+									"description": "Start time in HH:mm format (e.g., 09:00 for 9am)",
+									"type": "text"
+								},
+								{
+									"key": "duration_end_time",
+									"value": "21:00",
+									"description": "End time in HH:mm format (e.g., 21:00 for 9pm). Must be after start time.",
+									"type": "text"
+								},
+								{
+									"key": "job_date",
+									"value": "2025-12-25",
+									"description": "Job date (YYYY-MM-DD format)",
+									"type": "text"
+								},
+								{
+									"key": "per_hour_pay",
+									"value": "25.50",
+									"type": "text",
+									"description": "Required: Pay per hour (numeric, min: 0)"
+								},
+								{
+									"key": "job_image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api/jobs",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"jobs"
+							]
+						},
+						"description": "Create a new job posting. Job will be created with status 'Open'. Requires admin role.\n\n**Required Fields:**\n- job_title\n- job_description\n- number_of_workers_required (min: 1)\n- job_location\n- duration_start_time (HH:mm format, e.g., \"09:00\" for 9am - local time, converted to UTC)\n- duration_end_time (HH:mm format, e.g., \"21:00\" for 9pm, must be after start time - local time, converted to UTC)\n- job_date (YYYY-MM-DD format, must be today or future date)\n- per_hour_pay (numeric, min: 0)\n\n**Optional:**\n- required_skills (array of skill names, e.g., [\"PHP\", \"Laravel\", \"MySQL\"])\n- job_duration (time range string, e.g., \"9am to 9pm\" - for backward compatibility)\n- job_image (image file, max 2MB)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Job (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_title\": \"Updated Job Title\",\n    \"job_description\": \"Updated description\",\n    \"number_of_workers_required\": 3,\n    \"job_location\": \"Updated Location\",\n    \"duration_start_time\": \"10:00\",\n    \"duration_end_time\": \"18:00\",\n    \"job_date\": \"2025-12-30\",\n    \"per_hour_pay\": 30.00,\n    \"status\": \"Closed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api/jobs/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"jobs",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Update a job posting. All fields are optional. Requires admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Job (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/jobs/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"jobs",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Delete a job posting. Requires admin role."
+					},
+					"response": []
+				},
+				{
+					"name": "Apply for Job",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/jobs/:id/apply",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"jobs",
+								":id",
+								"apply"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Apply for an open job. Employees can apply only once per job and cannot apply if already assigned to another job on the same day. Application status will be 'Applied' and timestamp will be recorded. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Punch In (Start Job)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "punch_in_latitude",
+									"value": "24.8607",
+									"type": "text",
+									"description": "Required: Latitude coordinate"
+								},
+								{
+									"key": "punch_in_longitude",
+									"value": "67.0011",
+									"type": "text",
+									"description": "Required: Longitude coordinate"
+								},
+								{
+									"key": "punch_in_image",
+									"type": "file",
+									"src": [],
+									"description": "Optional: Image file (max 5MB)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/jobs/:id/punch-in",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"jobs",
+								":id",
+								"punch-in"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Punch in (start job) for a selected employee. Only employees with application status 'Selected' for this job can punch in. Punch-in is allowed only once per job, only on the job date, and only between the job's duration_start_time and 1 hour after start. Employee must not have another active job 'In Progress' on the same day. On success, application status is updated to 'In Progress' and 'punch_in_at' timestamp is recorded. Requires location (latitude/longitude) and optional image. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Punch Out (Complete Job)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "punch_out_latitude",
+									"value": "24.8607",
+									"type": "text",
+									"description": "Required: Latitude coordinate"
+								},
+								{
+									"key": "punch_out_longitude",
+									"value": "67.0011",
+									"type": "text",
+									"description": "Required: Longitude coordinate"
+								},
+								{
+									"key": "punch_out_image",
+									"type": "file",
+									"src": [],
+									"description": "Optional: Image file (max 5MB)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/jobs/:id/punch-out",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"jobs",
+								":id",
+								"punch-out"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Punch out (complete job) for an employee. Only employees with application status 'In Progress' and a recorded punch_in_at can punch out. Punch-out is allowed only once per job, only on the job date, and only at or after the job's duration_end_time (not before). On success, application status is updated to 'Completed' and 'punch_out_at' timestamp is recorded. Requires location (latitude/longitude) and optional image. Punch-out is mandatory for job closure. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Applications",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/my-applications?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"my-applications"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get all job applications submitted by the authenticated employee. Returns full job details including job title, job location, job description, job duration, job date, job image, and application status (Applied, Selected, In Progress, Completed, Rejected). Supports pagination. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Job Applications (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/jobs/:id/applications?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"jobs",
+								":id",
+								"applications"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Get all applications for a specific job (Admin only). Returns employee profile (full_name, email, phone_number, profile_image), skills, residential_address, application status, and past job completion count. Supports pagination. Requires admin authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Select Employees for Job (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"employee_ids\": [2, 3, 4]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api/jobs/:id/select-employees",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"jobs",
+								":id",
+								"select-employees"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Job ID"
+								}
+							]
+						},
+						"description": "Select employees for a job (Admin only). Validates that selection count doesn't exceed required workers and that employee skills match job requirements. Updates application status to 'Selected' and job status to 'Assigned' when required number is reached. Requires admin authentication."
+					},
+					"response": []
+				}
+			],
+			"description": "Job posting endpoints. All employees can view jobs, only admins can create/update/delete. Employees can apply for open jobs. Admins can view all applications for a job and select employees."
+		},
+		{
+			"name": "Skills Management",
+			"item": [
+				{
+					"name": "Get All Skills (Public)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/skills",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"skills"
+							]
+						},
+						"description": "Get all available skills. Public endpoint (no authentication required). Used for employee registration."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Skills (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/skills?per_page=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"skills"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "50",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get all available skills for dropdown (Admin only). Supports pagination. Requires admin authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Skill",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Plumber\",\n    \"description\": \"Plumbing services\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api/skills",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"skills"
+							]
+						},
+						"description": "Create a new skill (Admin only). Used for dropdown options like Plumber, Driver, Waiter, etc. Requires admin authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Skill",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Skill Name\",\n    \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api/skills/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"skills",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Skill ID"
+								}
+							]
+						},
+						"description": "Update a skill (Admin only). Requires admin authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Skill",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/api/skills/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api",
+								"skills",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Skill ID"
+								}
+							]
+						},
+						"description": "Delete a skill (Admin only). Requires admin authentication."
+					},
+					"response": []
+				}
+			],
+			"description": "Skills management endpoints for creating dropdown options (Admin only). Skills like Plumber, Driver, Waiter, etc."
+		},
+		{
+			"name": "Group Chats",
+			"item": [
+				{
+					"name": "Get My Group Chats",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/group-chats?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"group-chats"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get all group chats the authenticated user is a member of. Group chats are automatically created when a job is fully assigned. Returns group chat details, job information, member count, and whether user can send messages. Supports pagination. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Group Chat Messages",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/group-chats/:id/messages?per_page=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"group-chats",
+								":id",
+								"messages"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "50",
+									"description": "Items per page"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Group Chat ID"
+								}
+							]
+						},
+						"description": "Get all messages for a specific group chat. Only accessible to group members. Returns messages with sender information and timestamps. Supports pagination. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message to Group Chat",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Hello everyone! Looking forward to working with you.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/group-chats/:id/messages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"group-chats",
+								":id",
+								"messages"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Group Chat ID"
+								}
+							]
+						},
+						"description": "Send a message to a group chat. Only group members can send messages. Employees cannot send messages if the job is Closed or Filled (admin can always send). Message must be max 5000 characters. Requires authentication."
+					},
+					"response": []
+				}
+			],
+			"description": "Group chat endpoints. Group chats are automatically created when a job is fully assigned. Includes all selected employees and admin. Employees cannot send messages when job is closed/completed."
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "Get Notifications",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications?per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Get all notifications for the authenticated employee. Notifications are sent when an employee is selected or rejected for a job. Supports pagination. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications/:id/read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications",
+								":id",
+								"read"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "Notification ID"
+								}
+							]
+						},
+						"description": "Mark a specific notification as read. Requires authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Mark All Notifications as Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications/read-all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications",
+								"read-all"
+							]
+						},
+						"description": "Mark all notifications as read. Requires authentication."
+					},
+					"response": []
+				}
+			],
+			"description": "Notification endpoints for employee notifications. Notifications are automatically sent when an employee is selected or rejected for a job."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8001",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "employee_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
