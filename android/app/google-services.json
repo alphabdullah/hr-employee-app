@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281767469313",
+    "project_id": "retail-support-co",
+    "storage_bucket": "retail-support-co.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281767469313:android:4cf8e1333b6e40c9533b00",
+        "android_client_info": {
+          "package_name": "com.retailsupportco.retailsupportapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlr74-5buCwByeKHyPuFeh1-1VGT0M2Ik"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

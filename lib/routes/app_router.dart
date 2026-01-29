@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import '../views/splash_screen.dart';
 import '../views/login_screen.dart';
-import '../views/signup_screen.dart';
+import '../views/signup/signup_screen.dart';
+import '../views/signup/signup_step1_screen.dart';
+import '../views/signup/signup_step2_screen.dart';
+import '../views/signup/signup_step3_screen.dart';
+import '../views/signup/signup_step4_screen.dart';
 import '../views/forgot_password_screen.dart';
 import '../views/main_tab_screen.dart';
 import '../views/job_detail_screen.dart';
 import '../views/job_history_screen.dart';
+import '../views/address_picker_screen.dart';
+import '../views/profile_edit_screen.dart';
+import '../views/pending_profile_landing_screen.dart';
 import '../models/job_model.dart';
 import 'route_names.dart';
 
@@ -32,6 +39,34 @@ class AppRouter {
       case RouteNames.signUp:
         return MaterialPageRoute(
           builder: (_) => const SignUpScreen(),
+          settings: settings,
+        );
+
+      case RouteNames.signUpStep1:
+        final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
+        return MaterialPageRoute(
+          builder: (_) => SignUpStep1Screen(isEditMode: isEditMode),
+          settings: settings,
+        );
+
+      case RouteNames.signUpStep2:
+        final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
+        return MaterialPageRoute(
+          builder: (_) => SignUpStep2Screen(isEditMode: isEditMode),
+          settings: settings,
+        );
+
+      case RouteNames.signUpStep3:
+        final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
+        return MaterialPageRoute(
+          builder: (_) => SignUpStep3Screen(isEditMode: isEditMode),
+          settings: settings,
+        );
+
+      case RouteNames.signUpStep4:
+        final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
+        return MaterialPageRoute(
+          builder: (_) => SignUpStep4Screen(isEditMode: isEditMode),
           settings: settings,
         );
 
@@ -68,6 +103,33 @@ class AppRouter {
       case RouteNames.jobHistory:
         return MaterialPageRoute(
           builder: (_) => const JobHistoryScreen(),
+          settings: settings,
+        );
+
+      case RouteNames.addressPicker:
+        double? initialLat;
+        double? initialLng;
+        if (args is Map<String, dynamic>) {
+          initialLat = args['latitude'] as double?;
+          initialLng = args['longitude'] as double?;
+        }
+        return MaterialPageRoute(
+          builder: (_) => AddressPickerScreen(
+            initialLatitude: initialLat,
+            initialLongitude: initialLng,
+          ),
+          settings: settings,
+        );
+
+      case RouteNames.editProfile:
+        return MaterialPageRoute(
+          builder: (_) => const ProfileEditScreen(),
+          settings: settings,
+        );
+
+      case RouteNames.pendingDashboard:
+        return MaterialPageRoute(
+          builder: (_) => const PendingProfileLandingScreen(),
           settings: settings,
         );
 

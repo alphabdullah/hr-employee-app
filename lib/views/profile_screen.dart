@@ -8,6 +8,8 @@ import '../resources/components/primary_button.dart';
 import '../resources/components/skills_selector.dart';
 import '../utils/screen_unit_util.dart';
 import '../utils/toast_message.dart';
+import '../routes/app_router.dart';
+import '../routes/route_names.dart';
 
 /// Profile Screen View following MVVM pattern
 class ProfileScreen extends StatefulWidget {
@@ -138,6 +140,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       text: 'Save Profile',
                       isLoading: vm.isLoading,
                       onPressed: () => _handleSave(vm),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        AppRouter.pushNamed(context, RouteNames.editProfile);
+                      },
+                      icon: Icon(Icons.edit_outlined),
+                      label: Text('Edit Registration Details'),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(
+                          vertical: ScreenUnitUtil.getSpacing(16),
+                        ),
+                      ),
                     ),
                   ],
                 ),

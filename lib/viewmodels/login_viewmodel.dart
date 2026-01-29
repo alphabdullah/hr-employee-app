@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/login_model.dart';
+import '../models/registration_progress_model.dart';
 import '../services/api_client.dart';
 import '../services/api_endpoints.dart';
 import '../services/auth_service.dart';
@@ -9,11 +10,15 @@ class LoginViewModel extends ChangeNotifier {
   LoginModel _loginModel = LoginModel.empty();
   bool _isLoading = false;
   String? _errorMessage;
+  RegistrationProgressModel? _registrationProgress;
+  Map<String, dynamic>? _userData;
   
   // Getters
   LoginModel get loginModel => _loginModel;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  RegistrationProgressModel? get registrationProgress => _registrationProgress;
+  Map<String, dynamic>? get userData => _userData;
   
   /// Update email
   void updateEmail(String email) {
@@ -76,17 +81,33 @@ class LoginViewModel extends ChangeNotifier {
       _isLoading = false;
       
       if (response.isSuccess) {
-        // Extract token and employee data from response
+        // Extract token, user data, and registration progress from response
         final token = response.getField<String>('token');
-        final employeeData = response.getField<Map<String, dynamic>>('employee');
+        final userData = response.getField<Map<String, dynamic>>('user');
+        final registrationProgressData = response.getField<Map<String, dynamic>>('registration_progress');
         
         if (token != null && token.isNotEmpty) {
           // Save token
           final tokenSaved = await AuthService.saveToken(token);
           
+          // Save user data
+          _userData = userData;
+          
+          // Parse registration progress
+          if (registrationProgressData != null) {
+            try {
+              _registrationProgress = RegistrationProgressModel.fromJson(registrationProgressData);
+            } catch (e) {
+              debugPrint('Failed to parse registration progress: $e');
+              _registrationProgress = RegistrationProgressModel.empty();
+            }
+          } else {
+            _registrationProgress = RegistrationProgressModel.empty();
+          }
+          
           // Save employee ID if available
-          if (employeeData != null) {
-            final employeeId = employeeData['id']?.toString();
+          if (userData != null) {
+            final employeeId = userData['id']?.toString();
             if (employeeId != null) {
               await AuthService.saveEmployeeId(employeeId);
             }
@@ -130,6 +151,8 @@ class LoginViewModel extends ChangeNotifier {
     _loginModel = LoginModel.empty();
     _isLoading = false;
     _errorMessage = null;
+    _registrationProgress = null;
+    _userData = null;
     notifyListeners();
   }
 }

@@ -336,10 +336,47 @@ class _LoginScreenState extends State<LoginScreen> {
         // Wait a bit for toast to show, then navigate
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          // Navigate to home screen with bottom tabs and remove all previous routes
-          // This prevents going back to login screen after successful login
-          AppRouter.pushNamedAndRemoveUntil(context, RouteNames.home);
-          ToastMessage.showSuccess('Login successful!', context);
+          // Check registration progress and navigate accordingly
+          final registrationProgress = viewModel.registrationProgress;
+          final nextStep = registrationProgress?.nextStep;
+          
+          if (nextStep != null) {
+            // User needs to complete registration steps
+            String route;
+            switch (nextStep) {
+              case 2:
+                route = RouteNames.signUpStep2;
+                break;
+              case 3:
+                route = RouteNames.signUpStep3;
+                break;
+              case 4:
+                route = RouteNames.signUpStep4;
+                break;
+              default:
+                route = RouteNames.signUpStep1;
+            }
+            // Navigate to the required step and remove login from stack
+            // Pass isEditMode: false since user is completing registration
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              route,
+              (route) => false,
+              arguments: {'isEditMode': false},
+            );
+            ToastMessage.showSuccess('Login successful! Please complete your registration.', context);
+          } else {
+            // All steps complete - check if user status is pending
+            final userData = viewModel.userData;
+            final userStatus = userData?['status'] as String?;
+            
+            if (userStatus == 'pending') {
+              AppRouter.pushNamedAndRemoveUntil(context, RouteNames.pendingDashboard);
+              ToastMessage.showSuccess('Login successful! Continue completing your steps.', context);
+            } else {
+              AppRouter.pushNamedAndRemoveUntil(context, RouteNames.home);
+              ToastMessage.showSuccess('Login successful!', context);
+            }
+          }
         }
       } else if (mounted && viewModel.errorMessage != null) {
         // Error message is already displayed in the UI via Consumer

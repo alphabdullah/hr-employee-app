@@ -12,32 +12,104 @@ class ApiEndpoints {
   // AUTHENTICATION ENDPOINTS
   // ============================================================================
 
-  /// Register a new employee account
+  /// Register Step 1 - Create account & profile
   /// 
   /// **Method:** POST
-  /// **Path:** /register
+  /// **Path:** /api/register/step-1
   /// **Auth:** Not required
+  /// **Headers:** Content-Type: application/json, Accept: application/json
   /// 
   /// **Required Fields:**
-  /// - full_name (string)
-  /// - email (string, unique)
-  /// - phone_number (string)
-  /// - residential_address (string)
-  /// - skills (array, min: 1, max: 8)
-  /// - password (string, max 8 chars, must contain uppercase, lowercase, digit, special char)
+  /// - name (string, max 255)
+  /// - surname (string, max 255)
+  /// - email (string, unique, valid email)
+  /// - password (string, min 8, must match password_confirmation)
+  /// - password_confirmation (string, same as password)
   /// 
-  /// **Password Rules:**
-  /// - At least 1 uppercase letter
-  /// - At least 1 lowercase letter
-  /// - At least 1 numeric digit
-  /// - At least 1 special character (@$!%*?&#)
-  /// - Maximum 8 characters
+  /// **Optional Fields:**
+  /// - dob (string, date Y-m-d)
+  /// - tel_no (string, max 50)
+  /// - whatsapp_no (string, max 50)
+  /// - address (string)
+  /// - country (string, max 100)
+  /// - city (string, max 100)
+  /// - latitude (number, -90 to 90)
+  /// - longitude (number, -180 to 180)
+  /// - post_code (string, max 20)
+  /// - nat_insurance_no (string, max 50)
+  /// - nationality (string, max 100)
+  /// - right_to_work_uk (boolean)
+  /// - gender (string, max 50)
+  /// - marital_status (string, max 50)
+  /// - need_work_permit (boolean)
+  /// - work_permit_expiry (string, date Y-m-d, if need_work_permit is true)
+  /// - student_visa_hours_per_week (integer, 0-168)
+  /// - prefer_contact (string: email | sms | both)
+  /// - user_type (string: merchandisers | support_staff | drivers | team_leaders)
+  /// 
+  /// **Response:** Returns token for use in subsequent steps
+  static const String registerStep1 = '/api/register/step-1';
+
+  /// Register Step 2 - Compliance
+  /// 
+  /// **Method:** POST
+  /// **Path:** /api/register/step-2
+  /// **Auth:** Required (Bearer token from Step 1)
+  /// **Headers:** Content-Type: application/json, Accept: application/json, Authorization: Bearer {token}
+  /// 
+  /// **Optional Fields:**
+  /// - is_driver (boolean)
+  /// - driving_license_no (string, max 100, if is_driver is true)
+  /// - driving_license_date (string, date Y-m-d, if is_driver is true)
+  /// - own_car (boolean)
+  /// - criminal_record (boolean)
+  /// - criminal_record_type (string: spent | unspent, if criminal_record is true)
+  /// - cscs (boolean)
+  /// - sia (boolean)
+  /// - mhe (boolean)
+  /// - cis (boolean)
+  /// - first_aid (boolean)
+  /// - other_card_text (string, max 255)
+  /// - registered_disabled (boolean)
+  /// - disability_adjustments_text (string, if registered_disabled is true)
+  /// - disability_details_text (string, if registered_disabled is true)
+  static const String registerStep2 = '/api/register/step-2';
+
+  /// Register Step 3 - Availability
+  /// 
+  /// **Method:** POST
+  /// **Path:** /api/register/step-3
+  /// **Auth:** Required (Bearer token from Step 1)
+  /// **Headers:** Content-Type: application/json, Accept: application/json, Authorization: Bearer {token}
+  /// 
+  /// **Optional Fields:**
+  /// - day_days (array of string: monday, tuesday, wednesday, thursday, friday, saturday, sunday)
+  /// - night_days (array of string: same values as day_days)
+  static const String registerStep3 = '/api/register/step-3';
+
+  /// Register Step 4 - Bank Details
+  /// 
+  /// **Method:** POST
+  /// **Path:** /api/register/step-4
+  /// **Auth:** Required (Bearer token from Step 1)
+  /// **Headers:** Content-Type: application/json, Accept: application/json, Authorization: Bearer {token}
+  /// 
+  /// **Optional Fields:**
+  /// - account_holder (string, max 255)
+  /// - bank_name (string, max 255)
+  /// - bank_town (string, max 100)
+  /// - account_number (string, max 50)
+  /// - sort_code (string, max 20)
+  static const String registerStep4 = '/api/register/step-4';
+
+  /// Legacy register endpoint (deprecated - use registerStep1 instead)
+  @Deprecated('Use registerStep1 instead')
   static const String register = '/register';
 
   /// Login with email and password
   /// 
   /// **Method:** POST
-  /// **Path:** /login
+  /// **Path:** /api/login
   /// **Auth:** Not required
   /// 
   /// **Request Body:**
@@ -45,7 +117,7 @@ class ApiEndpoints {
   /// - password (string)
   /// 
   /// **Response:** Returns authentication token
-  static const String login = '/login';
+  static const String login = '/api/login';
 
   /// Logout and invalidate the current authentication token
   /// 
@@ -124,6 +196,99 @@ class ApiEndpoints {
   /// **Auth:** Required (Bearer token)
   static const String getProfile = '/profile';
 
+  /// Get authenticated user's complete profile data including all steps
+  /// 
+  /// **Method:** GET
+  /// **Path:** /api/me
+  /// **Auth:** Required (Bearer token)
+  /// 
+  /// **Response:** Returns user data with nested profile, compliance, availability, and bank_detail objects
+  static const String getMe = '/api/me';
+
+  /// User - Update Step 1 (Profile)
+  /// 
+  /// **Method:** PUT
+  /// **Path:** /api/me/step-1
+  /// **Auth:** Required (Bearer token)
+  /// **Headers:** Content-Type: application/json, Accept: application/json, Authorization: Bearer {token}
+  /// 
+  /// **Required Fields:**
+  /// - name (string, max 255)
+  /// - surname (string, max 255)
+  /// - email (string, unique except current user)
+  /// 
+  /// **Optional Fields:**
+  /// - dob (string, date Y-m-d)
+  /// - tel_no (string, max 50)
+  /// - whatsapp_no (string, max 50)
+  /// - address (string)
+  /// - country (string, max 100)
+  /// - city (string, max 100)
+  /// - latitude (number, -90 to 90)
+  /// - longitude (number, -180 to 180)
+  /// - post_code (string, max 20)
+  /// - nat_insurance_no (string, max 50)
+  /// - nationality (string, max 100)
+  /// - right_to_work_uk (boolean)
+  /// - gender (string, max 50)
+  /// - marital_status (string, max 50)
+  /// - need_work_permit (boolean)
+  /// - work_permit_expiry (string, date Y-m-d, if need_work_permit is true)
+  /// - student_visa_hours_per_week (integer, 0-168)
+  /// - password (string, min 8, use with password_confirmation)
+  /// - password_confirmation (string, if password sent)
+  /// - prefer_contact (string: email | sms | both)
+  /// - user_type (string: merchandisers | support_staff | drivers | team_leaders)
+  static const String updateProfileStep1 = '/api/me/step-1';
+
+  /// User - Update Step 2 (Compliance)
+  /// 
+  /// **Method:** PUT
+  /// **Path:** /api/me/step-2
+  /// **Auth:** Required (Bearer token)
+  /// **Headers:** Content-Type: application/json, Accept: application/json, Authorization: Bearer {token}
+  /// 
+  /// **Optional Fields:**
+  /// - is_driver (boolean)
+  /// - driving_license_no (string, max 100, if is_driver is true)
+  /// - driving_license_date (string, date Y-m-d, if is_driver is true)
+  /// - own_car (boolean)
+  /// - criminal_record (boolean)
+  /// - criminal_record_type (string: spent | unspent, if criminal_record is true)
+  /// - cscs, sia, mhe, cis, first_aid (boolean)
+  /// - other_card_text (string, max 255)
+  /// - registered_disabled (boolean)
+  /// - disability_adjustments_text (string, if registered_disabled is true)
+  /// - disability_details_text (string, if registered_disabled is true)
+  static const String updateProfileStep2 = '/api/me/step-2';
+
+  /// User - Update Step 3 (Availability)
+  /// 
+  /// **Method:** PUT
+  /// **Path:** /api/me/step-3
+  /// **Auth:** Required (Bearer token)
+  /// **Headers:** Content-Type: application/json, Accept: application/json, Authorization: Bearer {token}
+  /// 
+  /// **Optional Fields:**
+  /// - day_days (array of string: monday, tuesday, wednesday, thursday, friday, saturday, sunday)
+  /// - night_days (array of string: same values as day_days)
+  static const String updateProfileStep3 = '/api/me/step-3';
+
+  /// User - Update Step 4 (Bank Details)
+  /// 
+  /// **Method:** PUT
+  /// **Path:** /api/me/step-4
+  /// **Auth:** Required (Bearer token)
+  /// **Headers:** Content-Type: application/json, Accept: application/json, Authorization: Bearer {token}
+  /// 
+  /// **Optional Fields:**
+  /// - account_holder (string, max 255)
+  /// - bank_name (string, max 255)
+  /// - bank_town (string, max 100)
+  /// - account_number (string, max 50)
+  /// - sort_code (string, max 20)
+  static const String updateProfileStep4 = '/api/me/step-4';
+
   /// Update profile information (without image)
   /// 
   /// **Method:** PUT
@@ -158,82 +323,6 @@ class ApiEndpoints {
   static const String updateProfileWithImage = '/profile';
 
   // ============================================================================
-  // ADMIN ENDPOINTS
-  // ============================================================================
-
-  /// Get admin dashboard with statistics
-  /// 
-  /// **Method:** GET
-  /// **Path:** /admin/dashboard
-  /// **Auth:** Required (Bearer token, Admin role)
-  static const String adminDashboard = '/admin/dashboard';
-
-  /// Get all employees (users only)
-  /// 
-  /// **Method:** GET
-  /// **Path:** /admin/employees
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// 
-  /// **Query Parameters:**
-  /// - per_page (int, optional): Items per page (default: 15)
-  /// 
-  /// **Note:** Supports pagination
-  static const String getAllEmployees = '/admin/employees';
-
-  /// Get a specific employee by ID
-  /// 
-  /// **Method:** GET
-  /// **Path:** /admin/employees/:id
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Employee ID
-  static String getEmployeeById(String id) => '/admin/employees/$id';
-
-  /// Update employee details
-  /// 
-  /// **Method:** PUT
-  /// **Path:** /admin/employees/:id
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// **Content-Type:** application/json
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Employee ID
-  /// 
-  /// **Updatable Fields (all optional):**
-  /// - full_name (string)
-  /// - email (string)
-  /// - phone_number (string)
-  /// - residential_address (string)
-  /// - skills (array)
-  /// - status (string): "Active" or "Inactive"
-  static String updateEmployee(String id) => '/admin/employees/$id';
-
-  /// Update employee status (Active/Inactive)
-  /// 
-  /// **Method:** PATCH
-  /// **Path:** /admin/employees/:id/status
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// **Content-Type:** application/json
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Employee ID
-  /// 
-  /// **Request Body:**
-  /// - status (string): "Active" or "Inactive"
-  static String updateEmployeeStatus(String id) => '/admin/employees/$id/status';
-
-  /// Delete an employee
-  /// 
-  /// **Method:** DELETE
-  /// **Path:** /admin/employees/:id
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Employee ID
-  static String deleteEmployee(String id) => '/admin/employees/$id';
-
-  // ============================================================================
   // JOBS ENDPOINTS
   // ============================================================================
 
@@ -264,57 +353,6 @@ class ApiEndpoints {
   /// 
   /// **Note:** Only accessible if job status is not 'Filled'
   static String getJobById(String id) => '/jobs/$id';
-
-  /// Create a new job posting (Admin only)
-  /// 
-  /// **Method:** POST
-  /// **Path:** /admin/jobs
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// **Content-Type:** multipart/form-data
-  /// 
-  /// **Required Fields:**
-  /// - job_title (string)
-  /// - job_description (string)
-  /// - number_of_workers_required (int, min: 1)
-  /// - job_location (string)
-  /// - job_duration (string): Time range (e.g., "9am to 9pm")
-  /// - job_date (string): Date in YYYY-MM-DD format (must be today or future date)
-  /// 
-  /// **Optional:**
-  /// - job_image (file): Image file, max 2MB
-  /// 
-  /// **Note:** Job will be created with status 'Open'
-  static const String createJob = '/admin/jobs';
-
-  /// Update a job posting (Admin only)
-  /// 
-  /// **Method:** PUT
-  /// **Path:** /admin/jobs/:id
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// **Content-Type:** application/json
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Job ID
-  /// 
-  /// **Updatable Fields (all optional):**
-  /// - job_title (string)
-  /// - job_description (string)
-  /// - number_of_workers_required (int)
-  /// - job_location (string)
-  /// - job_duration (string)
-  /// - job_date (string): YYYY-MM-DD format
-  /// - status (string): "Open", "Closed", or "Filled"
-  static String updateJob(String id) => '/admin/jobs/$id';
-
-  /// Delete a job posting (Admin only)
-  /// 
-  /// **Method:** DELETE
-  /// **Path:** /admin/jobs/:id
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Job ID
-  static String deleteJob(String id) => '/admin/jobs/$id';
 
   /// Apply for an open job
   /// 
@@ -380,99 +418,21 @@ class ApiEndpoints {
   /// - Supports pagination
   static const String getMyApplications = '/my-applications';
 
-  /// Get all applications for a specific job (Admin only)
-  /// 
-  /// **Method:** GET
-  /// **Path:** /admin/jobs/:id/applications
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Job ID
-  /// 
-  /// **Query Parameters:**
-  /// - per_page (int, optional): Items per page (default: 15)
-  /// 
-  /// **Note:**
-  /// - Returns employee profile (full_name, email, phone_number, profile_image), skills, residential_address
-  /// - Includes application status and past job completion count
-  /// - Supports pagination
-  static String getJobApplications(String id) => '/admin/jobs/$id/applications';
-
-  /// Select employees for a job (Admin only)
-  /// 
-  /// **Method:** POST
-  /// **Path:** /admin/jobs/:id/select-employees
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// **Content-Type:** application/json
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Job ID
-  /// 
-  /// **Request Body:**
-  /// - employee_ids (array): Array of employee IDs to select
-  /// 
-  /// **Note:**
-  /// - Validates that selection count doesn't exceed required workers
-  /// - Validates that employee skills match job requirements
-  /// - Updates application status to 'Selected'
-  /// - Job status is updated to 'Assigned' when required number is reached
-  static String selectEmployeesForJob(String id) => '/admin/jobs/$id/select-employees';
-
   // ============================================================================
   // SKILLS MANAGEMENT ENDPOINTS
   // ============================================================================
 
-  /// Get all available skills for dropdown (Admin only)
+  /// Get all available skills for dropdown
   /// 
   /// **Method:** GET
-  /// **Path:** /admin/skills
-  /// **Auth:** Required (Bearer token, Admin role)
+  /// **Path:** /skills
+  /// **Auth:** Required (Bearer token)
   /// 
   /// **Query Parameters:**
   /// - per_page (int, optional): Items per page (default: 50)
   /// 
   /// **Note:** Supports pagination. Used for dropdown options like Plumber, Driver, Waiter, etc.
   static const String getAllSkills = '/skills';
-
-  /// Create a new skill (Admin only)
-  /// 
-  /// **Method:** POST
-  /// **Path:** /admin/skills
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// **Content-Type:** application/json
-  /// 
-  /// **Request Body:**
-  /// - name (string): Skill name (e.g., "Plumber", "Driver", "Waiter")
-  /// - description (string, optional): Skill description
-  /// 
-  /// **Note:** Used for dropdown options in job creation and employee profiles
-  static const String createSkill = '/admin/skills';
-
-  /// Update a skill (Admin only)
-  /// 
-  /// **Method:** PUT
-  /// **Path:** /admin/skills/:id
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// **Content-Type:** application/json
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Skill ID
-  /// 
-  /// **Request Body:**
-  /// - name (string, optional): Updated skill name
-  /// - description (string, optional): Updated skill description
-  static String updateSkill(String id) => '/admin/skills/$id';
-
-  /// Delete a skill (Admin only)
-  /// 
-  /// **Method:** DELETE
-  /// **Path:** /admin/skills/:id
-  /// **Auth:** Required (Bearer token, Admin role)
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Skill ID
-  static String deleteSkill(String id) => '/admin/skills/$id';
-
   // ============================================================================
   // GROUP CHATS ENDPOINTS
   // ============================================================================
