@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/signup_viewmodel.dart';
@@ -11,8 +13,37 @@ import 'viewmodels/notification_viewmodel.dart';
 import 'utils/screen_unit_util.dart';
 import 'resources/themes/app_theme.dart';
 import 'routes/app_router.dart';
+import 'firebase_options.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  final messaging = FirebaseMessaging.instance;
+  final settings = await messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+    carPlay: true,
+    criticalAlert: true,
+    provisional: true,
+    announcement: true,
+  );
+
+  if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+      settings.authorizationStatus == AuthorizationStatus.provisional) {
+    final token = await messaging.getToken();
+    debugPrint('FCM Device Token: $token');
+  } else {
+    debugPrint('FCM permission not granted: ${settings.authorizationStatus}');
+  }
+
+  messaging.onTokenRefresh.listen((newToken) {
+    debugPrint('FCM Token refreshed: $newToken');
+  });
+
   runApp(const MyApp());
 }
 

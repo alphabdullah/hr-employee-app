@@ -11,6 +11,7 @@ class PrimaryButton extends StatelessWidget {
   final double? height;
   final Color? backgroundColor;
   final Color? foregroundColor;
+  final IconData? icon;
 
   const PrimaryButton({
     super.key,
@@ -21,6 +22,7 @@ class PrimaryButton extends StatelessWidget {
     this.height,
     this.backgroundColor,
     this.foregroundColor,
+    this.icon,
   });
 
   @override
@@ -52,13 +54,32 @@ class PrimaryButton extends StatelessWidget {
                   ),
                 ),
               )
-            : Text(
-                text,
-                style: TextStyle(
-                  fontSize: ScreenUnitUtil.getFontSize(18),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            : icon != null
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        icon,
+                        size: ScreenUnitUtil.getFontSize(20),
+                        color: foregroundColor ?? theme.colorScheme.onPrimary,
+                      ),
+                      SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+                      Text(
+                        text,
+                        style: TextStyle(
+                          fontSize: ScreenUnitUtil.getFontSize(18),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    text,
+                    style: TextStyle(
+                      fontSize: ScreenUnitUtil.getFontSize(18),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
       ),
     );
   }

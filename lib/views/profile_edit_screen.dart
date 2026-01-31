@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/signup_viewmodel.dart';
 import '../utils/screen_unit_util.dart';
-import '../resources/components/step_indicator.dart';
 import '../routes/route_names.dart';
+import '../resources/components/primary_button.dart';
 
 /// Profile Edit Screen - Allows editing all 4 registration steps
 class ProfileEditScreen extends StatefulWidget {
@@ -52,121 +52,55 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             }
 
             return Column(
-              children: [
-                // Step Indicator
-                StepIndicator(currentStep: _currentStep, totalSteps: 4),
-                
-                // Step Navigation Buttons
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ScreenUnitUtil.getSpacing(24),
-                    vertical: ScreenUnitUtil.getSpacing(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStepButton(context, 1, 'Profile', Icons.person_outline),
-                      _buildStepButton(context, 2, 'Compliance', Icons.verified_user_outlined),
-                      _buildStepButton(context, 3, 'Availability', Icons.calendar_today_outlined),
-                      _buildStepButton(context, 4, 'Bank', Icons.account_balance_outlined),
-                    ],
-                  ),
+            children: [
+              SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+              Text(
+                'Pick a section to update',
+                style: TextStyle(
+                  fontSize: ScreenUnitUtil.getFontSize(20),
+                  fontWeight: FontWeight.w600,
                 ),
-                
-                Divider(),
-                
-                // Content Area - Show instructions
-                Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(24)),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.edit_outlined,
-                            size: ScreenUnitUtil.getFontSize(64),
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          SizedBox(height: ScreenUnitUtil.getSpacing(16)),
-                          Text(
-                            'Select a step to edit',
-                            style: TextStyle(
-                              fontSize: ScreenUnitUtil.getFontSize(20),
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-                          Text(
-                            'Tap on any step above to edit your profile information',
-                            style: TextStyle(
-                              fontSize: ScreenUnitUtil.getFontSize(14),
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              ),
+              SizedBox(height: ScreenUnitUtil.getSpacing(34)),
+              _buildPrimaryStepButton(context, 'Profile', Icons.person_outline, 1),
+              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+              _buildPrimaryStepButton(context, 'Compliance', Icons.verified_user_outlined, 2),
+              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+              _buildPrimaryStepButton(context, 'Availability', Icons.calendar_today_outlined, 3),
+              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+              _buildPrimaryStepButton(context, 'Bank Details', Icons.account_balance_outlined, 4),
+              SizedBox(height: ScreenUnitUtil.getSpacing(34)),
+              Text(
+                'Tap any button to go directly into that step for editing.',
+                style: TextStyle(
+                  fontSize: ScreenUnitUtil.getFontSize(14),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-              ],
-            );
+                textAlign: TextAlign.center,
+              ),
+            ],
+          );
           },
         ),
       ),
     );
   }
 
-  Widget _buildStepButton(BuildContext context, int step, String label, IconData icon) {
-    final isActive = _currentStep == step;
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _currentStep = step;
-          });
-          _navigateToStep(context, step);
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: ScreenUnitUtil.getSpacing(8),
-            horizontal: ScreenUnitUtil.getSpacing(4),
-          ),
-          decoration: BoxDecoration(
-            color: isActive
-                ? Theme.of(context).colorScheme.primaryContainer
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: ScreenUnitUtil.getFontSize(20),
-                color: isActive
-                    ? Theme.of(context).colorScheme.onPrimaryContainer
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              SizedBox(height: ScreenUnitUtil.getSpacing(4)),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: ScreenUnitUtil.getFontSize(10),
-                  color: isActive
-                      ? Theme.of(context).colorScheme.onPrimaryContainer
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+  Widget _buildPrimaryStepButton(BuildContext context, String label, IconData icon, int step) {
+    return Center(
+      child: SizedBox(
+        width: ScreenUnitUtil.getWidth(300),
+        child: PrimaryButton(
+          text: label,
+          icon: icon,
+          onPressed: () {
+            setState(() => _currentStep = step);
+            _navigateToStep(context, step);
+          },
         ),
       ),
     );
+      
   }
 
   void _navigateToStep(BuildContext context, int step) {

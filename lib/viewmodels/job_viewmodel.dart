@@ -147,14 +147,8 @@ class JobViewModel extends ChangeNotifier {
         return false;
       }
       
-      // Check if job date is today
-      final jobDay = DateTime(
-        app.job.jobDate.year,
-        app.job.jobDate.month,
-        app.job.jobDate.day,
-      );
-      
-      return jobDay.isAtSameMomentAs(today);
+      // Check if today is one of the job's scheduled days (job_day_dates or jobDate)
+      return app.job.isDateScheduledFor(today);
     }).toList();
     
     if (activeAppsForToday.isEmpty) {
@@ -178,14 +172,8 @@ class JobViewModel extends ChangeNotifier {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    // Check if job date is today
-    final jobDay = DateTime(
-      application.job.jobDate.year,
-      application.job.jobDate.month,
-      application.job.jobDate.day,
-    );
-    
-    if (!jobDay.isAtSameMomentAs(today)) {
+    // Check if today is one of the job's scheduled days (job_day_dates or jobDate)
+    if (!application.job.isDateScheduledFor(today)) {
       return false;
     }
     
@@ -195,17 +183,17 @@ class JobViewModel extends ChangeNotifier {
       return false;
     }
     
-    // Check if start time exists
-    if (application.job.durationStartTime == null || 
-        application.job.durationStartTime!.isEmpty) {
-      return false;
+    // If no start time from API (e.g. /api/me/jobs), show Punch In all day on scheduled dates
+    final startTime = application.job.durationStartTime;
+    if (startTime == null || startTime.isEmpty) {
+      return true;
     }
     
     try {
       // Parse start time (format: "09:00" or "09:00:00")
-      final startTimeParts = application.job.durationStartTime!.split(':');
+      final startTimeParts = startTime.split(':');
       if (startTimeParts.length < 2) {
-        return false;
+        return true;
       }
       
       final startHour = int.parse(startTimeParts[0]);
@@ -226,7 +214,7 @@ class JobViewModel extends ChangeNotifier {
       return timeDifference.inMinutes >= 0 && timeDifference.inMinutes < 60;
     } catch (e) {
       debugPrint('Failed to parse start time: $e');
-      return false;
+      return true;
     }
   }
 
@@ -242,15 +230,8 @@ class JobViewModel extends ChangeNotifier {
         return false;
       }
       
-      // Exclude jobs that are shown in Active Job (today's Selected jobs)
-      final jobDay = DateTime(
-        app.job.jobDate.year,
-        app.job.jobDate.month,
-        app.job.jobDate.day,
-      );
-      
-      // Don't include if it's today's job (already shown in Active Job)
-      return !jobDay.isAtSameMomentAs(today);
+      // Don't include if today is one of this job's scheduled days (already in Active Job)
+      return !app.job.isDateScheduledFor(today);
     }).toList();
   }
 
@@ -552,14 +533,8 @@ class JobViewModel extends ChangeNotifier {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    // Check if job date is today
-    final jobDay = DateTime(
-      application.job.jobDate.year,
-      application.job.jobDate.month,
-      application.job.jobDate.day,
-    );
-    
-    if (!jobDay.isAtSameMomentAs(today)) {
+    // Check if today is one of the job's scheduled days (job_day_dates or jobDate)
+    if (!application.job.isDateScheduledFor(today)) {
       return false;
     }
     
@@ -604,20 +579,17 @@ class JobViewModel extends ChangeNotifier {
     }
   }
 
-  /// Load user's applications to check application status
+  /// Load user's jobs from /api/me/jobs and store in my applications list.
   /// 
   /// [forceRefresh] - If true, always fetch from API. If false and data exists, show cached data and refresh in background.
-  Future<void> loadMyApplications({bool forceRefresh = false}) async {
+  Future<void> loadMyJobs({bool forceRefresh = false}) async {
     // Try to load from disk cache first (if not forcing refresh)
     if (!forceRefresh && _myApplications.isEmpty) {
       final cachedApplications = await CacheService.loadApplications();
       if (cachedApplications != null && cachedApplications.isNotEmpty) {
         try {
-          // Clear previous data
           _applicationStatuses.clear();
           _myApplications.clear();
-          
-          // Parse cached applications
           for (var application in cachedApplications) {
             final jobData = application['job'] as Map<String, dynamic>?;
             final jobId = jobData?['id']?.toString() ?? 
@@ -625,7 +597,6 @@ class JobViewModel extends ChangeNotifier {
             final status = application['status']?.toString() ?? 
                           application['application_status']?.toString();
             final applicationId = application['id']?.toString() ?? '';
-            
             if (jobData != null && jobId != null && status != null) {
               try {
                 final job = JobModel.fromJson(jobData);
@@ -640,182 +611,137 @@ class JobViewModel extends ChangeNotifier {
               }
             }
           }
-          
           _hasLoadedApplications = true;
           notifyListeners();
-          // Continue to refresh in background
         } catch (e) {
           debugPrint('Failed to parse cached applications: $e');
         }
       }
     }
-    
-    // If we have cached data (in-memory or disk) and not forcing refresh, refresh in background
+
     if (!forceRefresh && _hasLoadedApplications && _myApplications.isNotEmpty) {
-      // Show cached data immediately (already in state)
-      // Refresh in background without blocking UI
-      _refreshApplicationsInBackground();
+      _refreshMyJobsInBackground();
       return;
     }
-    
-    // First time loading or force refresh - show loading indicator
+
     _isLoadingApplications = true;
     notifyListeners();
-    
+
     try {
-      // Get authentication token
       final token = await AuthService.getToken();
-      
       if (token == null || token.isEmpty) {
-        debugPrint('[Job Applications API] Authentication token is missing');
+        debugPrint('[api/me/jobs] Authentication token is missing');
         _isLoadingApplications = false;
         notifyListeners();
         return;
       }
 
       final queryParams = {'per_page': '100'};
-      debugPrint('[Job Applications API] Starting load applications request');
-      debugPrint('[Job Applications API] Endpoint: ${ApiEndpoints.getMyApplications}');
-      debugPrint('[Job Applications API] Query Parameters: $queryParams');
-      debugPrint('[Job Applications API] Force Refresh: $forceRefresh');
+      debugPrint('[api/me/jobs] GET ${ApiEndpoints.getMyJobs}');
+      debugPrint('[api/me/jobs] Query: $queryParams, forceRefresh: $forceRefresh');
 
-      // Call my applications API endpoint
       final response = await ApiClient.get(
-        ApiEndpoints.getMyApplications,
-        queryParameters: queryParams, // Get more applications
+        ApiEndpoints.getMyJobs,
+        queryParameters: queryParams,
         token: token,
       );
 
       _isLoadingApplications = false;
       _hasLoadedApplications = true;
 
-      debugPrint('[Job Applications API] Response received');
-      debugPrint('[Job Applications API] Success: ${response.isSuccess}');
-      debugPrint('[Job Applications API] Status Code: ${response.statusCode}');
-      debugPrint('[Job Applications API] Message: ${response.message}');
+      debugPrint('[api/me/jobs] Response success: ${response.isSuccess}, statusCode: ${response.statusCode}');
+      debugPrint('[api/me/jobs] Message: ${response.message}');
 
       if (response.isSuccess) {
-        // Parse applications array from response
-        // Try different possible keys: 'applications', 'data', or direct array
-        List<Map<String, dynamic>>? applicationsList = 
-            response.getList<Map<String, dynamic>>('applications') ??
-            response.getList<Map<String, dynamic>>('data');
-        
-        if (applicationsList != null && applicationsList.isNotEmpty) {
-          debugPrint('[Job Applications API] Found ${applicationsList.length} applications');
-          
-          // Clear previous data
+        List<Map<String, dynamic>>? jobsList = response.getList<Map<String, dynamic>>('jobs');
+        if (jobsList != null && jobsList.isNotEmpty) {
+          debugPrint('[api/me/jobs] Parsing ${jobsList.length} jobs');
           _applicationStatuses.clear();
           _myApplications.clear();
-          
-          // Prepare list for caching
           final applicationsForCache = <Map<String, dynamic>>[];
-          
-          // Parse each application
-          for (var application in applicationsList) {
-            // Handle nested job object or direct job_id field
-            final jobData = application['job'] as Map<String, dynamic>?;
-            final jobId = jobData?['id']?.toString() ?? 
-                         application['job_id']?.toString();
-            final status = application['status']?.toString() ?? 
-                          application['application_status']?.toString();
-            final applicationId = application['id']?.toString() ?? '';
-            
-            if (jobData != null && jobId != null && status != null) {
+
+          for (var jobOrApplication in jobsList) {
+            // /api/me/jobs returns flat job objects (no nested 'job'); support both shapes
+            final jobData = jobOrApplication['job'] as Map<String, dynamic>? ?? jobOrApplication;
+            final jobId = jobData['id']?.toString() ?? jobOrApplication['job_id']?.toString();
+            // Use application_status for tab filtering; job 'status' (filled/open) is for JobModel only
+            final status = jobOrApplication['application_status']?.toString() ?? 'Applied';
+            final applicationId = jobOrApplication['id']?.toString() ?? '';
+
+            if (jobData.isNotEmpty && jobId != null) {
               try {
-                // Parse job from application data
                 final job = JobModel.fromJson(jobData);
-                
-                // Store application status mapping
                 _applicationStatuses[jobId] = status;
-                
-                // Store full application data
                 _myApplications.add(ApplicationData(
                   job: job,
                   status: status,
                   applicationId: applicationId,
                 ));
-                
-                // Prepare for caching (store original application data)
-                applicationsForCache.add(application);
+                applicationsForCache.add({
+                  'job': jobData,
+                  'status': status,
+                  'id': applicationId,
+                });
               } catch (e) {
-                debugPrint('Failed to parse job from application: $e');
+                debugPrint('[api/me/jobs] Failed to parse job: $e');
               }
             }
           }
-          
-          // Save to cache
+
           if (applicationsForCache.isNotEmpty) {
             await CacheService.saveApplications(applicationsForCache);
-            debugPrint('[Job Applications API] Saved ${applicationsForCache.length} applications to cache');
           }
-          
+          debugPrint('[api/me/jobs] Loaded ${_myApplications.length} jobs');
           notifyListeners();
-          debugPrint('[Job Applications API] Successfully loaded ${_myApplications.length} applications');
-          debugPrint('[Job Applications API] Application statuses: $_applicationStatuses');
         } else {
-          // No applications found
-          debugPrint('[Job Applications API] No applications found in response');
+          debugPrint('[api/me/jobs] No jobs in response');
           _applicationStatuses.clear();
           _myApplications.clear();
-          // Clear cache if no applications
           await CacheService.clearApplications();
           notifyListeners();
         }
       } else {
-        debugPrint('[Job Applications API] Failed to load applications');
-        debugPrint('[Job Applications API] Error message: ${response.message}');
-        debugPrint('[Job Applications API] Error response data: ${response.data}');
+        debugPrint('[api/me/jobs] Request failed: ${response.message}');
       }
     } catch (e) {
       _isLoadingApplications = false;
-      debugPrint('[Job Applications API] Exception occurred: $e');
-      debugPrint('[Job Applications API] Stack trace: ${StackTrace.current}');
+      debugPrint('[api/me/jobs] Exception: $e');
       notifyListeners();
     }
   }
 
-  /// Refresh applications in background without showing loading indicator
-  Future<void> _refreshApplicationsInBackground() async {
-    try {
-      // Get authentication token
-      final token = await AuthService.getToken();
-      
-      if (token == null || token.isEmpty) {
-        return;
-      }
+  /// Load user's applications to check application status.
+  /// Delegates to loadMyJobs (GET /api/me/jobs).
+  Future<void> loadMyApplications({bool forceRefresh = false}) async {
+    return loadMyJobs(forceRefresh: forceRefresh);
+  }
 
-      // Call my applications API endpoint silently
+  /// Refresh my jobs in background without showing loading indicator (GET /api/me/jobs).
+  Future<void> _refreshMyJobsInBackground() async {
+    try {
+      final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) return;
+
       final response = await ApiClient.get(
-        ApiEndpoints.getMyApplications,
+        ApiEndpoints.getMyJobs,
         queryParameters: {'per_page': '100'},
         token: token,
       );
 
       if (response.isSuccess) {
-        // Parse applications array from response
-        List<Map<String, dynamic>>? applicationsList = 
-            response.getList<Map<String, dynamic>>('applications') ??
-            response.getList<Map<String, dynamic>>('data');
-        
-        if (applicationsList != null) {
-          // Clear previous data
+        List<Map<String, dynamic>>? jobsList = response.getList<Map<String, dynamic>>('jobs');
+        if (jobsList != null) {
           _applicationStatuses.clear();
           _myApplications.clear();
-          
-          // Prepare list for caching
           final applicationsForCache = <Map<String, dynamic>>[];
-          
-          // Parse each application
-          for (var application in applicationsList) {
-            final jobData = application['job'] as Map<String, dynamic>?;
-            final jobId = jobData?['id']?.toString() ?? 
-                         application['job_id']?.toString();
-            final status = application['status']?.toString() ?? 
-                          application['application_status']?.toString();
-            final applicationId = application['id']?.toString() ?? '';
-            
-            if (jobData != null && jobId != null && status != null) {
+
+          for (var jobOrApplication in jobsList) {
+            final jobData = jobOrApplication['job'] as Map<String, dynamic>? ?? jobOrApplication;
+            final jobId = jobData['id']?.toString() ?? jobOrApplication['job_id']?.toString();
+            final status = jobOrApplication['application_status']?.toString() ?? 'Applied';
+            final applicationId = jobOrApplication['id']?.toString() ?? '';
+
+            if (jobData.isNotEmpty && jobId != null) {
               try {
                 final job = JobModel.fromJson(jobData);
                 _applicationStatuses[jobId] = status;
@@ -824,29 +750,27 @@ class JobViewModel extends ChangeNotifier {
                   status: status,
                   applicationId: applicationId,
                 ));
-                
-                // Prepare for caching
-                applicationsForCache.add(application);
+                applicationsForCache.add({
+                  'job': jobData,
+                  'status': status,
+                  'id': applicationId,
+                });
               } catch (e) {
-                debugPrint('Failed to parse job from application: $e');
+                debugPrint('Background refresh parse error: $e');
               }
             }
           }
-          
-          // Save to cache
+
           if (applicationsForCache.isNotEmpty) {
             await CacheService.saveApplications(applicationsForCache);
           } else {
             await CacheService.clearApplications();
           }
-          
-          // Update UI with fresh data
           notifyListeners();
         }
       }
     } catch (e) {
-      // Silently fail background refresh
-      debugPrint('Background refresh failed: $e');
+      debugPrint('[api/me/jobs] Background refresh failed: $e');
     }
   }
 

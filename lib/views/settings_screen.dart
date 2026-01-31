@@ -51,6 +51,22 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: ScreenUnitUtil.getSpacing(16),
+            endIndent: ScreenUnitUtil.getSpacing(16),
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          ),
+          _buildSettingsItem(
+            context: context,
+            icon: Icons.edit_outlined,
+            title: 'Edit Registration Profile',
+            subtitle: 'Update compliance, availability or bank info',
+            onTap: () {
+              AppRouter.pushNamed(context, RouteNames.editProfile);
+            },
+          ),
           
           Divider(
             height: 1,

@@ -4,8 +4,8 @@ import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
 import '../viewmodels/settings_viewmodel.dart';
 import 'home_screen.dart';
-import 'explore_screen.dart';
 import 'chat_screen.dart';
+// import 'availability_shortcut_screen.dart';
 import 'settings_screen.dart';
 
 /// Main tab screen shown after login with 4 tabs: Home, Explore, Chat, Settings
@@ -32,8 +32,8 @@ class _MainTabScreenState extends State<MainTabScreen> {
           
           final pages = [
             HomeScreen(key: ValueKey('home_$themeKey')),
-            ExploreScreen(key: ValueKey('explore_$themeKey')),
             ChatScreen(key: ValueKey('chat_$themeKey')),
+            // AvailabilityShortcutScreen(key: ValueKey('availability_$themeKey')),
             SettingsScreen(key: ValueKey('settings_$themeKey')),
           ];
           
@@ -69,15 +69,15 @@ class _MainTabScreenState extends State<MainTabScreen> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore),
-            label: 'Explore',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: 'Chat',
           ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.calendar_today_outlined),
+          //   activeIcon: Icon(Icons.calendar_today),
+          //   label: 'Availability',
+          // ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
             activeIcon: Icon(Icons.settings),

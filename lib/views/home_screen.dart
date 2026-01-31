@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // Active Job, Assigned Jobs, Pending
+    _tabController = TabController(length: 2, vsync: this); // Active Job, Assigned Jobs
     _carouselController = PageController();
     
     // Load jobs, applications, and notifications
@@ -189,7 +189,6 @@ class _HomeScreenState extends State<HomeScreen>
                   tabs: const [
                     Tab(text: 'Active Job'),
                     Tab(text: 'Assigned Jobs'),
-                    Tab(text: 'Pending'),
                   ],
                 ),
               ),
@@ -202,7 +201,6 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             _buildActiveJobTab(),
             _buildAssignedJobsTab(),
-            _buildPendingJobsTab(),
           ],
         ),
       ),
@@ -384,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen>
           return const Center(child: CircularProgressIndicator());
         }
 
-        final assignedApplications = viewModel.assignedJobs;
+        final assignedApplications = viewModel.allApplications;
 
         if (assignedApplications.isEmpty) {
           return RefreshIndicator(
@@ -394,10 +392,10 @@ class _HomeScreenState extends State<HomeScreen>
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.7,
-                child: _buildEmptyState('No assigned jobs'),
-              ),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: _buildEmptyState('No jobs available'),
+                ),
             ),
           );
         }
@@ -418,58 +416,6 @@ class _HomeScreenState extends State<HomeScreen>
             itemCount: assignedApplications.length,
             itemBuilder: (context, index) {
               final application = assignedApplications[index];
-              return JobCard(
-                job: application.job,
-                applicationStatus: application.status,
-                applicationData: application,
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPendingJobsTab() {
-    return Consumer<JobViewModel>(
-      builder: (context, viewModel, child) {
-        if (viewModel.isLoading || viewModel.isLoadingApplications) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        // Get applications with "Applied" status
-        final appliedApplications = viewModel.appliedApplications;
-
-        if (appliedApplications.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: () async {
-              await viewModel.loadMyApplications(forceRefresh: true);
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.7,
-                child: _buildEmptyState('No pending applications'),
-              ),
-            ),
-          );
-        }
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            await viewModel.loadMyApplications(forceRefresh: true);
-          },
-          child: ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(
-              left: ScreenUnitUtil.getSpacing(16),
-              right: ScreenUnitUtil.getSpacing(16),
-              top: ScreenUnitUtil.getSpacing(8),
-              bottom: MediaQuery.of(context).padding.bottom + ScreenUnitUtil.getSpacing(8),
-            ),
-            itemCount: appliedApplications.length,
-            itemBuilder: (context, index) {
-              final application = appliedApplications[index];
               return JobCard(
                 job: application.job,
                 applicationStatus: application.status,

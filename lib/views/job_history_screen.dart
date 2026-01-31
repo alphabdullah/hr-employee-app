@@ -20,8 +20,7 @@ class _JobHistoryScreenState extends State<JobHistoryScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<JobViewModel>();
-      // Load applications - will show cached data immediately if available, then refresh in background
-      viewModel.loadMyApplications();
+      viewModel.loadMyJobs();
     });
   }
 
@@ -52,7 +51,7 @@ class _JobHistoryScreenState extends State<JobHistoryScreen> {
 
           if (allApplications.isEmpty) {
             return RefreshIndicator(
-              onRefresh: () => viewModel.loadMyApplications(),
+              onRefresh: () => viewModel.loadMyJobs(),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: SizedBox(
@@ -98,7 +97,7 @@ class _JobHistoryScreenState extends State<JobHistoryScreen> {
                 return JobCard(
                   job: application.job,
                   applicationStatus: application.status,
-                  showJobImage: false,
+                  showJobImage: true,
                   showJobStatus: true,
                   jobStatusText: _getStatusText(application.job.jobStatus),
                   jobStatusColor: _getStatusColor(application.job.jobStatus),

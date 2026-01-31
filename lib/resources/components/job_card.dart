@@ -274,24 +274,63 @@ class JobCard extends StatelessWidget {
               
               SizedBox(height: ScreenUnitUtil.getSpacing(8)),
               
-              // Job Date and Duration
+              // Client name (when available from /api/me/jobs client object)
+              if (job.createdBy != null && job.createdBy!['name'] != null && (job.createdBy!['name'] as String).isNotEmpty) ...[
+                Row(
+                  children: [
+                    _buildJobDetailItem(
+                      context,
+                      Icons.business_outlined,
+                      'Client: ${job.createdBy!['name']}',
+                    ),
+                  ],
+                ),
+                SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+              ],
+              
+              // Date range (from_date - end_date) or single date
               Row(
                 children: [
                   _buildJobDetailItem(
                     context,
                     Icons.calendar_today_outlined,
-                    job.formattedDate,
+                    job.formattedDateRange ?? job.formattedDate,
                   ),
-                  if (showDuration && job.jobDuration != null && job.jobDuration!.isNotEmpty) ...[
+                  if (job.numberOfDays != null && job.numberOfDays! > 0) ...[
                     SizedBox(width: ScreenUnitUtil.getSpacing(16)),
+                    _buildJobDetailItem(
+                      context,
+                      Icons.date_range_outlined,
+                      '${job.numberOfDays} day${job.numberOfDays! > 1 ? 's' : ''}',
+                    ),
+                  ],
+                ],
+              ),
+              if (showDuration && (job.jobDuration != null && job.jobDuration!.isNotEmpty)) ...[
+                SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                Row(
+                  children: [
                     _buildJobDetailItem(
                       context,
                       Icons.access_time_outlined,
                       job.jobDuration!,
                     ),
                   ],
-                ],
-              ),
+                ),
+              ],
+              // Shift type (day/night) when available
+              if (job.shiftType != null && job.shiftType!.isNotEmpty) ...[
+                SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                Row(
+                  children: [
+                    _buildJobDetailItem(
+                      context,
+                      Icons.wb_sunny_outlined,
+                      _formatShiftType(job.shiftType!),
+                    ),
+                  ],
+                ),
+              ],
               
               // Posted Date (for Explore screen)
               if (showPostedDate && job.createdAt != null && onFormatDateTime != null) ...[
@@ -364,6 +403,14 @@ String _buildPayText(JobModel job) {
   // default = per_hour
   return 'USD $pay / hr';
 }
+
+  String _formatShiftType(String shiftType) {
+    final s = shiftType.trim().toLowerCase();
+    if (s == 'day') return 'Day shift';
+    if (s == 'night') return 'Night shift';
+    if (s.isEmpty) return shiftType;
+    return shiftType[0].toUpperCase() + (shiftType.length > 1 ? shiftType.substring(1).toLowerCase() : '');
+  }
 
   String _buildWorkersText(JobModel job) {
     final remaining = job.numberOfWorkersRemaining;

@@ -171,19 +171,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
                   SizedBox(height: ScreenUnitUtil.getSpacing(24)),
 
-                  // Job Description Section
-                  _buildSectionTitle('Job Description'),
-                  SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-                  Text(
-                    widget.job.jobDescription,
-                    style: TextStyle(
-                      fontSize: ScreenUnitUtil.getFontSize(16),
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-                      height: 1.6,
+                  // Job Description Section (when available)
+                  if (widget.job.jobDescription.isNotEmpty) ...[
+                    _buildSectionTitle('Job Description'),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    Text(
+                      widget.job.jobDescription,
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(16),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                        height: 1.6,
+                      ),
                     ),
-                  ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  ],
 
-                  SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  // Client Section (from /api/me/jobs client object)
+                  if (_hasClientInfo(widget.job)) ...[
+                    _buildSectionTitle('Client'),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    _buildClientSection(context, widget.job),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  ],
 
                   // Required Skills Section
                   if (widget.job.requiredSkills != null && widget.job.requiredSkills!.isNotEmpty)
@@ -232,126 +241,75 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   _buildDetailRow(
                     Icons.location_on_outlined,
                     'Location',
-                    widget.job.jobLocation,
+                    _buildLocationText(widget.job),
                   ),
                   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                   _buildDetailRow(
                     Icons.calendar_today_outlined,
                     'Date',
-                    widget.job.formattedDate,
+                    widget.job.formattedDateRange ?? widget.job.formattedDate,
                   ),
-                  SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                  _buildDetailRow(
-                    Icons.access_time_outlined,
-                    'Duration',
-                    _buildDurationText(widget.job),
-                  ),
+                  if (widget.job.numberOfDays != null && widget.job.numberOfDays! > 0) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    _buildDetailRow(
+                      Icons.date_range_outlined,
+                      'Number of days',
+                      '${widget.job.numberOfDays} day${widget.job.numberOfDays! > 1 ? 's' : ''}',
+                    ),
+                  ],
+                  if (widget.job.shiftType != null && widget.job.shiftType!.isNotEmpty) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    _buildDetailRow(
+                      Icons.wb_sunny_outlined,
+                      'Shift',
+                      _formatShiftType(widget.job.shiftType!),
+                    ),
+                  ],
+                  if (widget.job.jobDuration != null && widget.job.jobDuration!.isNotEmpty) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    _buildDetailRow(
+                      Icons.access_time_outlined,
+                      'Duration',
+                      widget.job.jobDuration!,
+                    ),
+                  ] else ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    _buildDetailRow(
+                      Icons.access_time_outlined,
+                      'Duration',
+                      _buildDurationText(widget.job),
+                    ),
+                  ],
+                  if (widget.job.jobDays != null && widget.job.jobDays!.isNotEmpty) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    _buildJobDaysRow(context, widget.job.jobDays!),
+                  ],
 
                   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
 
-                  // Check-in or Check-out Button (if applicable)
+                  // Punch In / Punch Out buttons (only on the job date)
                   Consumer<JobViewModel>(
                     builder: (context, viewModel, child) {
+                      if (!_isJobDateToday()) return const SizedBox.shrink();
                       final applicationData = viewModel.getApplicationDataForJob(widget.job.id);
-                      if (applicationData != null) {
-                        final status = applicationData.status.toLowerCase();
-                        final isInProgress = status == 'in progress';
-                        final shouldShowCheckIn = !isInProgress && viewModel.shouldShowCheckInButton(applicationData);
-                        final shouldShowCheckOut = isInProgress && viewModel.shouldShowCheckOutButton(applicationData);
-                        
-                        if (shouldShowCheckIn || shouldShowCheckOut) {
-                          return Column(
-                            children: [
-                              if (shouldShowCheckOut)
-                                _buildCheckOutButton(context, viewModel, applicationData)
-                              else
-                                _buildCheckInButton(context, viewModel, applicationData),
-                              SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                            ],
-                          );
-                        }
+                      if (applicationData == null) return const SizedBox.shrink();
+                      final status = applicationData.status.toLowerCase();
+                      final isInProgress = status == 'in progress';
+                      final shouldShowCheckIn = !isInProgress && viewModel.shouldShowCheckInButton(applicationData);
+                      final shouldShowCheckOut = isInProgress && viewModel.shouldShowCheckOutButton(applicationData);
+                      
+                      if (shouldShowCheckIn || shouldShowCheckOut) {
+                        return Column(
+                          children: [
+                            if (shouldShowCheckOut)
+                              _buildCheckOutButton(context, viewModel, applicationData)
+                            else
+                              _buildCheckInButton(context, viewModel, applicationData),
+                            SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                          ],
+                        );
                       }
                       return const SizedBox.shrink();
-                    },
-                  ),
-
-                  // Apply Button or Application Status (hide when Check In/Check Out button is shown)
-                  Consumer<JobViewModel>(
-                    builder: (context, viewModel, child) {
-                      final applicationData = viewModel.getApplicationDataForJob(widget.job.id);
-                      final hasApplied = viewModel.hasAppliedToJob(widget.job.id);
-                      final applicationStatus = viewModel.getApplicationStatus(widget.job.id);
-                      
-                      // Hide the status button if:
-                      // 1. Check In button is shown (status is "Selected")
-                      // 2. Check Out button is shown (status is "In Progress")
-                      if (applicationData != null) {
-                        final status = applicationData.status.toLowerCase();
-                        final isInProgress = status == 'in progress';
-                        final isSelected = status == 'selected';
-                        final shouldShowCheckIn = !isInProgress && viewModel.shouldShowCheckInButton(applicationData);
-                        final shouldShowCheckOut = isInProgress && viewModel.shouldShowCheckOutButton(applicationData);
-                        
-                        if ((isSelected && shouldShowCheckIn) || (isInProgress && shouldShowCheckOut)) {
-                          return const SizedBox.shrink();
-                        }
-                      }
-                      
-                      return SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: (_isApplying || hasApplied)
-                              ? null
-                              : () => _handleApply(context, viewModel),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: hasApplied
-                                ? _getStatusColor(applicationStatus)
-                                : (Theme.of(context).brightness == Brightness.dark
-                                    ? AppColors.darkPrimary
-                                    : AppColors.secondary),
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(
-                              vertical: ScreenUnitUtil.getSpacing(16),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                ScreenUnitUtil.getSpacing(12),
-                              ),
-                            ),
-                            elevation: hasApplied ? 0 : 2,
-                          ),
-                          child: _isApplying
-                              ? SizedBox(
-                                  height: ScreenUnitUtil.getFontSize(20),
-                                  width: ScreenUnitUtil.getFontSize(20),
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      hasApplied
-                                          ? _getStatusIcon(applicationStatus)
-                                          : Icons.send_outlined,
-                                      size: ScreenUnitUtil.getFontSize(20),
-                                    ),
-                                    SizedBox(width: ScreenUnitUtil.getSpacing(8)),
-                                    Text(
-                                      hasApplied
-                                          ? _getApplicationStatusText(applicationStatus)
-                                          : 'Apply for Job',
-                                      style: TextStyle(
-                                        fontSize: ScreenUnitUtil.getFontSize(16),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      );
                     },
                   ),
 
@@ -427,6 +385,118 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       case JobStatus.filled:
         return 'Filled';
     }
+  }
+
+  bool _hasClientInfo(JobModel job) {
+    final c = job.createdBy;
+    if (c == null) return false;
+    return c['name'] != null && (c['name'] as String).isNotEmpty;
+  }
+
+  Widget _buildClientSection(BuildContext context, JobModel job) {
+    final c = job.createdBy!;
+    final name = c['name']?.toString() ?? '';
+    final email = c['email']?.toString();
+    final phone = c['phone']?.toString();
+    final address = c['address']?.toString() ?? job.address;
+    final postcode = c['postcode']?.toString() ?? job.postcode;
+    final country = c['country']?.toString() ?? job.country;
+    final region = c['region']?.toString() ?? job.region;
+    final district = c['district']?.toString() ?? job.district;
+    final parts = <Widget>[];
+    if (name.isNotEmpty) {
+      parts.add(_buildDetailRow(Icons.person_outline, 'Name', name));
+      parts.add(SizedBox(height: ScreenUnitUtil.getSpacing(12)));
+    }
+    if (email != null && email.isNotEmpty) {
+      parts.add(_buildDetailRow(Icons.email_outlined, 'Email', email));
+      parts.add(SizedBox(height: ScreenUnitUtil.getSpacing(12)));
+    }
+    if (phone != null && phone.isNotEmpty) {
+      parts.add(_buildDetailRow(Icons.phone_outlined, 'Phone', phone));
+      parts.add(SizedBox(height: ScreenUnitUtil.getSpacing(12)));
+    }
+    final locParts = <String>[];
+    if (address != null && address.isNotEmpty) locParts.add(address);
+    if (region != null && region.isNotEmpty) locParts.add(region);
+    if (district != null && district.isNotEmpty) locParts.add(district);
+    if (postcode != null && postcode.isNotEmpty) locParts.add(postcode);
+    if (country != null && country.isNotEmpty) locParts.add(country);
+    if (locParts.isNotEmpty) {
+      parts.add(_buildDetailRow(Icons.location_on_outlined, 'Address', locParts.join(', ')));
+      parts.add(SizedBox(height: ScreenUnitUtil.getSpacing(12)));
+    }
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: parts..removeLast(),
+    );
+  }
+
+  String _buildLocationText(JobModel job) {
+    final parts = <String>[];
+    if (job.address != null && job.address!.isNotEmpty) parts.add(job.address!);
+    if (job.region != null && job.region!.isNotEmpty) parts.add(job.region!);
+    if (job.district != null && job.district!.isNotEmpty) parts.add(job.district!);
+    if (job.postcode != null && job.postcode!.isNotEmpty) parts.add(job.postcode!);
+    if (job.country != null && job.country!.isNotEmpty) parts.add(job.country!);
+    if (parts.isNotEmpty) return parts.join(', ');
+    return job.jobLocation.isNotEmpty ? job.jobLocation : 'Not specified';
+  }
+
+  String _formatShiftType(String shiftType) {
+    final s = shiftType.trim().toLowerCase();
+    if (s == 'day') return 'Day shift';
+    if (s == 'night') return 'Night shift';
+    if (s.isEmpty) return shiftType;
+    return shiftType[0].toUpperCase() + (shiftType.length > 1 ? shiftType.substring(1).toLowerCase() : '');
+  }
+
+  Widget _buildJobDaysRow(BuildContext context, List<String> jobDays) {
+    final labels = jobDays.map((d) {
+      final s = d.trim();
+      if (s.isEmpty) return d;
+      return s[0].toUpperCase() + (s.length > 1 ? s.substring(1).toLowerCase() : '');
+    }).toList();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.calendar_view_week_outlined,
+          size: ScreenUnitUtil.getFontSize(20),
+          color: AppColors.secondary,
+        ),
+        SizedBox(width: ScreenUnitUtil.getSpacing(12)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Job days',
+                style: TextStyle(
+                  fontSize: ScreenUnitUtil.getFontSize(12),
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+              SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+              Wrap(
+                spacing: ScreenUnitUtil.getSpacing(8),
+                runSpacing: ScreenUnitUtil.getSpacing(8),
+                children: labels.map((label) => Chip(
+                  label: Text(label, style: TextStyle(fontSize: ScreenUnitUtil.getFontSize(14), fontWeight: FontWeight.w500)),
+                  backgroundColor: AppColors.secondary.withOpacity(0.1),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ScreenUnitUtil.getSpacing(12),
+                    vertical: ScreenUnitUtil.getSpacing(4),
+                  ),
+                )).toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   String _buildWorkersText(JobModel job) {
@@ -637,6 +707,12 @@ String _buildPayText(JobModel job) {
     }
   }
 
+  bool _isJobDateToday() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return widget.job.isDateScheduledFor(today);
+  }
+
   Widget _buildCheckInButton(BuildContext context, JobViewModel viewModel, ApplicationData applicationData) {
     return SizedBox(
       width: double.infinity,
@@ -675,7 +751,7 @@ String _buildPayText(JobModel job) {
                   ),
                   SizedBox(width: ScreenUnitUtil.getSpacing(8)),
                   Text(
-                    'Check In',
+                    'Punch In',
                     style: TextStyle(
                       fontSize: ScreenUnitUtil.getFontSize(16),
                       fontWeight: FontWeight.w600,
@@ -723,7 +799,7 @@ String _buildPayText(JobModel job) {
                   ),
                   SizedBox(width: ScreenUnitUtil.getSpacing(8)),
                   Text(
-                    'Check Out',
+                    'Punch Out',
                     style: TextStyle(
                       fontSize: ScreenUnitUtil.getFontSize(16),
                       fontWeight: FontWeight.w600,

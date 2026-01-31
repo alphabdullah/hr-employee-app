@@ -28,7 +28,19 @@ class JobModel {
   final String? updatedAt;
   final double? perHourPay;
   final String? workMode; // fixed | per_hour
-
+  // /api/me/jobs fields
+  final DateTime? fromDate;
+  final DateTime? endDate;
+  final int? numberOfDays;
+  final String? shiftType; // day | night
+  final String? address;
+  final String? postcode;
+  final String? country;
+  final String? region;
+  final String? district;
+  final String? city;
+  final List<String>? jobDays;
+  final List<DateTime>? jobDayDates;
 
   JobModel({
     required this.id,
@@ -50,6 +62,18 @@ class JobModel {
     this.updatedAt,
     this.perHourPay,
     this.workMode,
+    this.fromDate,
+    this.endDate,
+    this.numberOfDays,
+    this.shiftType,
+    this.address,
+    this.postcode,
+    this.country,
+    this.region,
+    this.district,
+    this.city,
+      this.jobDays,
+      this.jobDayDates,
   });
 
   /// Create JobModel from API JSON response
@@ -90,8 +114,8 @@ class JobModel {
       jobDate = DateTime.now();
     }
 
-    // Handle job_image - can be null or a string URL
-    final jobImage = json['job_image'];
+    // Handle job_image / image_url (e.g. /api/me/jobs returns image_url)
+    final jobImage = json['job_image'] ?? json['image_url'];
     final String? jobImageUrl;
     if (jobImage == null || jobImage == 'null' || jobImage.toString().isEmpty) {
       jobImageUrl = null;
@@ -99,10 +123,12 @@ class JobModel {
       jobImageUrl = jobImage.toString();
     }
 
-    // Handle created_by object
+    // Handle created_by / client object (e.g. /api/me/jobs returns client)
     Map<String, dynamic>? createdBy;
     if (json['created_by'] != null && json['created_by'] is Map) {
       createdBy = Map<String, dynamic>.from(json['created_by']);
+    } else if (json['client'] != null && json['client'] is Map) {
+      createdBy = Map<String, dynamic>.from(json['client']);
     }
 
     // Handle required_skills array
@@ -200,32 +226,110 @@ class JobModel {
       }
     }
     
+    // job_location / address (e.g. /api/me/jobs returns address, region, district)
+    final rawLocation = json['job_location'] ?? json['address'];
+    String jobLocation = rawLocation?.toString() ?? '';
+    if (jobLocation.isEmpty && (json['region'] != null || json['district'] != null)) {
+      final parts = <String>[];
+      if (json['region'] != null && json['region'].toString().isNotEmpty) parts.add(json['region'].toString());
+      if (json['district'] != null && json['district'].toString().isNotEmpty) parts.add(json['district'].toString());
+      if (parts.isNotEmpty) jobLocation = parts.join(', ');
+    }
+    if (jobLocation.isEmpty && json['postcode'] != null && json['postcode'].toString().isNotEmpty) {
+      jobLocation = json['postcode'].toString();
+    }
+
+    // number_of_workers_required / required_employees (e.g. /api/me/jobs)
+    final rawRequired = json['number_of_workers_required'] ?? json['required_employees'];
+    final numberOfWorkersRequired = _parseInt(rawRequired, 0);
+    final numberOfWorkersFilled = _parseInt(
+      json['number_of_selected_workers'] ?? json['number_of_workers_filled'],
+      0,
+    );
+
+    // from_date / end_date / number_of_days / shift_type (e.g. /api/me/jobs)
+    DateTime? fromDate;
+    if (json['from_date'] != null) {
+      try {
+        fromDate = DateTime.parse(json['from_date'].toString());
+        if (fromDate.isUtc) fromDate = fromDate.toLocal();
+      } catch (_) {}
+    }
+    DateTime? endDate;
+    if (json['end_date'] != null) {
+      try {
+        endDate = DateTime.parse(json['end_date'].toString());
+        if (endDate.isUtc) endDate = endDate.toLocal();
+      } catch (_) {}
+    }
+    final numberOfDays = json['number_of_days'] != null ? _parseInt(json['number_of_days'], 0) : null;
+    final shiftType = json['shift_type']?.toString();
+    final address = json['address']?.toString();
+    final postcode = json['postcode']?.toString();
+    final country = json['country']?.toString();
+    final region = json['region']?.toString();
+    final district = json['district']?.toString();
+    final city = json['city']?.toString();
+    List<String>? jobDays;
+    if (json['job_days'] != null && json['job_days'] is List) {
+      jobDays = (json['job_days'] as List).map((e) => e.toString()).toList();
+    }
+    List<DateTime>? jobDayDates;
+    if (json['job_day_dates'] != null && json['job_day_dates'] is List) {
+      jobDayDates = (json['job_day_dates'] as List).map((e) {
+        final value = e?.toString();
+        if (value == null) return null;
+        try {
+          final parsed = DateTime.parse(value);
+          return parsed.isUtc ? parsed.toLocal() : parsed;
+        } catch (_) {
+          return null;
+        }
+      }).whereType<DateTime>().toList();
+      if (jobDayDates.isEmpty) jobDayDates = null;
+    }
+
     return JobModel(
       id: json['id']?.toString() ?? '',
       jobTitle: json['job_title'] ?? '',
       workType: workType,
-      jobDescription: json['job_description'] ?? '',
-      numberOfWorkersRequired: json['number_of_workers_required'] ?? 0,
-      numberOfWorkersFilled: json['number_of_selected_workers'] ?? 
-                            json['number_of_workers_filled'] ?? 
-                            0,
-      jobLocation: json['job_location'] ?? '',
+      jobDescription: json['job_description']?.toString() ?? '',
+      numberOfWorkersRequired: numberOfWorkersRequired,
+      numberOfWorkersFilled: numberOfWorkersFilled,
+      jobLocation: jobLocation,
       jobDate: jobDate,
       jobStatus: status,
       jobImageUrl: jobImageUrl,
-      jobDuration: json['job_duration'],
-      durationStartTime: convertTimeToLocal(json['duration_start_time']),
-      durationEndTime: convertTimeToLocal(json['duration_end_time']),
+      jobDuration: json['job_duration']?.toString(),
+      durationStartTime: convertTimeToLocal(json['duration_start_time']?.toString()),
+      durationEndTime: convertTimeToLocal(json['duration_end_time']?.toString()),
       requiredSkills: requiredSkills,
       createdBy: createdBy,
-      createdAt: convertDateTimeToLocal(json['created_at']),
-      updatedAt: convertDateTimeToLocal(json['updated_at']),
+      createdAt: convertDateTimeToLocal(json['created_at']?.toString()),
+      updatedAt: convertDateTimeToLocal(json['updated_at']?.toString()),
       perHourPay: (json['per_hour_pay'] != null)
           ? double.tryParse(json['per_hour_pay'].toString())
           : null,
       workMode: json['work_mode']?.toString(),
-
+      fromDate: fromDate,
+      endDate: endDate,
+      numberOfDays: numberOfDays,
+      shiftType: shiftType,
+      address: address,
+      postcode: postcode,
+      country: country,
+      region: region,
+      district: district,
+      city: city,
+      jobDays: jobDays,
+      jobDayDates: jobDayDates,
     );
+  }
+
+  static int _parseInt(dynamic value, int defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    return int.tryParse(value.toString()) ?? defaultValue;
   }
 
   Map<String, dynamic> toJson() {
@@ -249,7 +353,18 @@ class JobModel {
       'updatedAt': updatedAt,
       'perHourPay': perHourPay,
       'work_mode': workMode,
-
+      'fromDate': fromDate?.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
+      'numberOfDays': numberOfDays,
+      'shiftType': shiftType,
+      'address': address,
+      'postcode': postcode,
+      'country': country,
+      'region': region,
+      'district': district,
+      'city': city,
+      'jobDays': jobDays,
+      'jobDayDates': jobDayDates?.map((d) => d.toIso8601String()).toList(),
     };
   }
 
@@ -273,7 +388,18 @@ class JobModel {
     String? updatedAt,
     double? perHourPay,
     String? workMode,
-
+    DateTime? fromDate,
+    DateTime? endDate,
+    int? numberOfDays,
+    String? shiftType,
+    String? address,
+    String? postcode,
+    String? country,
+    String? region,
+    String? district,
+    String? city,
+    List<String>? jobDays,
+    List<DateTime>? jobDayDates,
   }) {
     return JobModel(
       id: id ?? this.id,
@@ -295,8 +421,35 @@ class JobModel {
       updatedAt: updatedAt ?? this.updatedAt,
       perHourPay: perHourPay ?? this.perHourPay,
       workMode: workMode ?? this.workMode,
-
+      fromDate: fromDate ?? this.fromDate,
+      endDate: endDate ?? this.endDate,
+      numberOfDays: numberOfDays ?? this.numberOfDays,
+      shiftType: shiftType ?? this.shiftType,
+      address: address ?? this.address,
+      postcode: postcode ?? this.postcode,
+      country: country ?? this.country,
+      region: region ?? this.region,
+      district: district ?? this.district,
+      city: city ?? this.city,
+      jobDays: jobDays ?? this.jobDays,
+      jobDayDates: jobDayDates ?? this.jobDayDates,
     );
+  }
+
+  /// Formatted date range (e.g. "Jan 30 - Feb 1, 2026") when job_day_dates exist
+  String? get formattedDateRange {
+    if (jobDayDates != null && jobDayDates!.length >= 2) {
+      final sorted = List<DateTime>.from(jobDayDates!)..sort();
+      final from = '${_getMonthName(sorted.first.month)} ${sorted.first.day}, ${sorted.first.year}';
+      final end = '${_getMonthName(sorted.last.month)} ${sorted.last.day}, ${sorted.last.year}';
+      return '$from - $end';
+    }
+    if (fromDate != null && endDate != null) {
+      final from = '${_getMonthName(fromDate!.month)} ${fromDate!.day}, ${fromDate!.year}';
+      final end = '${_getMonthName(endDate!.month)} ${endDate!.day}, ${endDate!.year}';
+      return '$from - $end';
+    }
+    return null;
   }
 
   /// Get formatted date string (e.g., "Today", "Tomorrow", "Dec 15, 2024")
@@ -322,6 +475,20 @@ class JobModel {
   /// Check if job is fully filled
   bool get isFullyFilled {
     return numberOfWorkersFilled >= numberOfWorkersRequired;
+  }
+
+  /// True if the given date (year/month/day) is one of the job's scheduled days.
+  /// Uses [jobDayDates] when present; otherwise compares to [jobDate].
+  bool isDateScheduledFor(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    if (jobDayDates != null && jobDayDates!.isNotEmpty) {
+      return jobDayDates!.any((d) {
+        final compare = DateTime(d.year, d.month, d.day);
+        return compare.isAtSameMomentAs(day);
+      });
+    }
+    final jobDay = DateTime(jobDate.year, jobDate.month, jobDate.day);
+    return jobDay.isAtSameMomentAs(day);
   }
 
   String _getMonthName(int month) {

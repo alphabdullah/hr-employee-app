@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:281767469313:android:4cf8e1333b6e40c9533b00",
+        "mobilesdk_app_id": "1:281767469313:android:b96c7f36dbba6507533b00",
         "android_client_info": {
-          "package_name": "com.retailsupportco.retailsupportapp"
+          "package_name": "com.example.hr_employee_app"
         }
       },
       "oauth_client": [],

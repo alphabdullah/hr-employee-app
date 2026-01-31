@@ -418,6 +418,15 @@ class ApiEndpoints {
   /// - Supports pagination
   static const String getMyApplications = '/my-applications';
 
+  /// Get authenticated user's jobs (my jobs list)
+  /// 
+  /// **Method:** GET
+  /// **Path:** /api/me/jobs
+  /// **Auth:** Required (Bearer token)
+  /// 
+  /// **Response:** Returns jobs list with job title, client, dates, status, image
+  static const String getMyJobs = '/api/me/jobs';
+
   // ============================================================================
   // SKILLS MANAGEMENT ENDPOINTS
   // ============================================================================

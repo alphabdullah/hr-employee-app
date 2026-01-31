@@ -24,6 +24,7 @@ class SignUpViewModel extends ChangeNotifier {
   String? _errorMessage;
   bool _isStepLoading = false; // Loading state for individual step submission
   bool _isLoadingProfile = false; // Loading state for profile data
+  bool _hasLoadedMeData = false;
 
   // Getters
   int get currentStep => _currentStep;
@@ -723,6 +724,12 @@ class SignUpViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    if (_hasLoadedMeData) {
+      _isLoadingProfile = false;
+      notifyListeners();
+      return;
+    }
+
     try {
       final token = await AuthService.getToken();
       if (token == null || token.isEmpty) {
@@ -822,6 +829,7 @@ class SignUpViewModel extends ChangeNotifier {
         }
 
         _errorMessage = null;
+        _hasLoadedMeData = true;
         debugPrint('Profile data loaded successfully');
       } else {
         _errorMessage = response.message;
@@ -1076,6 +1084,7 @@ class SignUpViewModel extends ChangeNotifier {
     _isStepLoading = false;
     _isLoadingProfile = false;
     _errorMessage = null;
+    _hasLoadedMeData = false;
     notifyListeners();
   }
 }
