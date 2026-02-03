@@ -32,6 +32,9 @@ class SignUpViewModel extends ChangeNotifier {
   bool _isPostcodeLoading = false;
   bool get isPostcodeLoading => _isPostcodeLoading;
 
+  // Agreement status tracking
+  bool _declarationAgreed = false;
+  bool _termsConditionsAgreed = false;
 
   // Getters
   int get currentStep => _currentStep;
@@ -47,6 +50,20 @@ class SignUpViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get canGoNext => _currentStep < 4;
   bool get canGoBack => _currentStep > 1;
+  bool get declarationAgreed => _declarationAgreed;
+  bool get termsConditionsAgreed => _termsConditionsAgreed;
+
+  /// Set declaration agreement status
+  void setDeclarationAgreed(bool value) {
+    _declarationAgreed = value;
+    notifyListeners();
+  }
+
+  /// Set terms & conditions agreement status
+  void setTermsConditionsAgreed(bool value) {
+    _termsConditionsAgreed = value;
+    notifyListeners();
+  }
 
   /// Set edit mode
   void setEditMode(bool value) {

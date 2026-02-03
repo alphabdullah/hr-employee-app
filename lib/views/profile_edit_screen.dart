@@ -14,8 +14,6 @@ class ProfileEditScreen extends StatefulWidget {
 }
 
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
-  int _currentStep = 1;
-
   @override
   void initState() {
     super.initState();
@@ -94,7 +92,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           text: label,
           icon: icon,
           onPressed: () {
-            setState(() => _currentStep = step);
             _navigateToStep(context, step);
           },
         ),
@@ -116,7 +113,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         route = RouteNames.signUpStep3;
         break;
       case 4:
-        route = RouteNames.signUpStep4;
+        // For step 4, redirect to declaration screen first
+        route = RouteNames.declaration;
         break;
       default:
         route = RouteNames.signUpStep1;

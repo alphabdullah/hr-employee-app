@@ -6,6 +6,8 @@ import '../views/signup/signup_screen.dart';
 import '../views/signup/signup_step1_screen.dart';
 import '../views/signup/signup_step2_screen.dart';
 import '../views/signup/signup_step3_screen.dart';
+import '../views/signup/declaration_screen.dart';
+import '../views/signup/terms_conditions_screen.dart';
 import '../views/signup/signup_step4_screen.dart';
 import '../views/forgot_password_screen.dart';
 import '../views/main_tab_screen.dart';
@@ -61,6 +63,20 @@ class AppRouter {
         final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
         return MaterialPageRoute(
           builder: (_) => SignUpStep3Screen(isEditMode: isEditMode),
+          settings: settings,
+        );
+
+      case RouteNames.declaration:
+        final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
+        return MaterialPageRoute(
+          builder: (_) => DeclarationScreen(isEditMode: isEditMode),
+          settings: settings,
+        );
+
+      case RouteNames.termsConditions:
+        final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
+        return MaterialPageRoute(
+          builder: (_) => TermsConditionsScreen(isEditMode: isEditMode),
           settings: settings,
         );
 

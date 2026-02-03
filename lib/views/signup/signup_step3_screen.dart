@@ -213,11 +213,10 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
         Navigator.pop(context, true);
         ToastMessage.showSuccess('Availability updated successfully!', context);
       } else {
-        // In registration mode, go to next step
-        viewModel.goToStep(4);
+        // In registration mode, go to declaration screen
         Navigator.pushReplacementNamed(
           context,
-          RouteNames.signUpStep4,
+          RouteNames.declaration,
           arguments: {'isEditMode': false},
         );
         ToastMessage.showSuccess('Availability saved successfully!', context);

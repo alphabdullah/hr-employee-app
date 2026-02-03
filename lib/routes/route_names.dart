@@ -10,6 +10,8 @@ class RouteNames {
   static const String signUpStep1 = '/signup/step1';
   static const String signUpStep2 = '/signup/step2';
   static const String signUpStep3 = '/signup/step3';
+  static const String declaration = '/signup/declaration';
+  static const String termsConditions = '/signup/terms-conditions';
   static const String signUpStep4 = '/signup/step4';
   static const String forgotPassword = '/forgot-password';
   

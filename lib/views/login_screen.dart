@@ -351,7 +351,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 route = RouteNames.signUpStep3;
                 break;
               case 4:
-                route = RouteNames.signUpStep4;
+                // If nextStep is 4, user needs to complete declarations first
+                route = RouteNames.declaration;
                 break;
               default:
                 route = RouteNames.signUpStep1;

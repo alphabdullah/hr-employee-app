@@ -87,7 +87,29 @@ class LoginViewModel extends ChangeNotifier {
         final registrationProgressData = response.getField<Map<String, dynamic>>('registration_progress');
         
         if (token != null && token.isNotEmpty) {
-          // Save token
+          final userStatus = userData?['status']?.toString().toLowerCase();
+
+          // SPECIAL CASE: If status is 'pending', DO NOT save anything to SharedPreferences
+          // Just keep data in memory to allow navigation to specific screens
+          if (userStatus == 'pending') {
+            _userData = userData;
+            
+            // Parse registration progress locally
+            if (registrationProgressData != null) {
+              try {
+                _registrationProgress = RegistrationProgressModel.fromJson(registrationProgressData);
+              } catch (e) {
+                _registrationProgress = RegistrationProgressModel.empty();
+              }
+            } else {
+              _registrationProgress = RegistrationProgressModel.empty();
+            }
+            
+            notifyListeners();
+            return true;
+          }
+
+          // Normal flow: Save token
           final tokenSaved = await AuthService.saveToken(token);
           
           // Save user data
@@ -111,6 +133,16 @@ class LoginViewModel extends ChangeNotifier {
             if (employeeId != null) {
               await AuthService.saveEmployeeId(employeeId);
             }
+            
+            // Save user status
+            if (userStatus != null) {
+              await AuthService.saveUserStatus(userStatus);
+            }
+          }
+          
+          // Save registration progress
+          if (_registrationProgress != null) {
+            await AuthService.saveRegistrationProgress(_registrationProgress!);
           }
           
           if (tokenSaved) {
