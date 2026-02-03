@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/chat_detail_viewmodel.dart';
-import '../models/chat_model.dart';
 import '../models/message_model.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
 
-/// Chat Detail Screen View for individual chat conversations
+/// Chat Detail Screen View for group conversations
 class ChatDetailScreen extends StatefulWidget {
-  final ChatModel chat;
+  final String groupId;
+  final String groupName;
 
   const ChatDetailScreen({
     super.key,
-    required this.chat,
+    required this.groupId,
+    required this.groupName,
   });
 
   @override
@@ -22,12 +23,19 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
 
+  // We'll create the viewmodel here
+  late final ChatDetailViewModel _viewModel;
+
   @override
   void initState() {
     super.initState();
+
+    // Create the viewmodel instance once
+    _viewModel = ChatDetailViewModel(widget.groupId);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = context.read<ChatDetailViewModel>();
-      viewModel.loadChatDetails(widget.chat).then((_) {
+      // Start loading messages
+      _viewModel.loadGroupMessages().then((_) {
         _scrollToBottom();
       });
     });
@@ -36,6 +44,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _viewModel.dispose(); // important: clean up the viewmodel
     super.dispose();
   }
 
@@ -55,79 +64,49 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget build(BuildContext context) {
     ScreenUnitUtil.init(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Consumer<ChatDetailViewModel>(
+    return ChangeNotifierProvider<ChatDetailViewModel>.value(
+      value: _viewModel,  // ← this makes Consumer and context.read work
+      child: Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text(widget.groupName),  // simple & clean
+        ),
+        body: Consumer<ChatDetailViewModel>(
           builder: (context, viewModel, child) {
-            return GestureDetector(
-              onTap: () => _showParticipantsDialog(context, viewModel),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildJobImage(widget.chat.jobImage),
-                  SizedBox(width: ScreenUnitUtil.getSpacing(8)),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.chat.jobTitle,
-                        style: TextStyle(
-                          fontSize: ScreenUnitUtil.getFontSize(18),
-                          fontWeight: FontWeight.w600,
-                        ),
+            if (viewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return Column(
+              children: [
+                // Messages list with pull-to-refresh
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () => viewModel.loadGroupMessages(forceRefresh: true),
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: ScreenUnitUtil.getSpacing(16),
+                        vertical: ScreenUnitUtil.getSpacing(8),
                       ),
-                      Text(
-                        '${viewModel.participants.isNotEmpty ? viewModel.participants.length : widget.chat.memberCount} members',
-                        style: TextStyle(
-                          fontSize: ScreenUnitUtil.getFontSize(12),
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                      itemCount: viewModel.messages.length,
+                      itemBuilder: (context, index) {
+                        final message = viewModel.messages[index];
+                        return _buildMessageBubble(context, message);
+                      },
+                    ),
                   ),
-                ],
-              ),
+                ),
+                // Message input
+                _buildMessageInput(context, viewModel),
+              ],
             );
           },
         ),
       ),
-      body: Consumer<ChatDetailViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return Column(
-            children: [
-              // Messages list with pull-to-refresh
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => viewModel.loadChatDetails(widget.chat, forceRefresh: true),
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ScreenUnitUtil.getSpacing(16),
-                      vertical: ScreenUnitUtil.getSpacing(8),
-                    ),
-                    itemCount: viewModel.messages.length,
-                    itemBuilder: (context, index) {
-                      final message = viewModel.messages[index];
-                      return _buildMessageBubble(context, message);
-                    },
-                  ),
-                ),
-              ),
-              // Message input
-              _buildMessageInput(context, viewModel),
-            ],
-          );
-        },
-      ),
     );
   }
-
   Widget _buildMessageBubble(BuildContext context, MessageModel message) {
     final isMe = message.isSentByMe;
 
@@ -234,71 +213,143 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
     );
   }
+// Inside build() → the input part
 
-  Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: ScreenUnitUtil.getSpacing(16),
-        vertical: ScreenUnitUtil.getSpacing(8),
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
+Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
+  return Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: ScreenUnitUtil.getSpacing(16),
+      vertical: ScreenUnitUtil.getSpacing(8),
+    ),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 4,
+          offset: const Offset(0, -2),
+        ),
+      ],
+    ),
+    child: SafeArea(
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: viewModel.messageController,
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(24)),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: ScreenUnitUtil.getSpacing(16),
+                  vertical: ScreenUnitUtil.getSpacing(12),
+                ),
+              ),
+              maxLines: null,
+              textInputAction: TextInputAction.send,
+              // onSubmitted: (value) async {
+              //   await viewModel.sendMessage();
+              //   _scrollToBottom();
+              // },
+            onSubmitted: (value) async {
+  await viewModel.sendMessage();
+  _scrollToBottom();
+},
+            ),
+          ),
+          SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.secondary,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white),
+              // onPressed: () async {
+              //   await viewModel.sendMessage();
+              //   _scrollToBottom();
+              // },
+              onPressed: () async {
+  await viewModel.sendMessage();
+  _scrollToBottom();
+},
+
+            ),
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: viewModel.messageController,
-                decoration: InputDecoration(
-                  hintText: 'Type a message...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      ScreenUnitUtil.getSpacing(24),
-                    ),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: ScreenUnitUtil.getSpacing(16),
-                    vertical: ScreenUnitUtil.getSpacing(12),
-                  ),
-                ),
-                maxLines: null,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => viewModel.sendMessage().then((_) {
-                  _scrollToBottom();
-                }),
-              ),
-            ),
-            SizedBox(width: ScreenUnitUtil.getSpacing(8)),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.secondary,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white),
-                onPressed: () {
-                  viewModel.sendMessage().then((_) {
-                    _scrollToBottom();
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
+  // Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
+  //   return Container(
+  //     padding: EdgeInsets.symmetric(
+  //       horizontal: ScreenUnitUtil.getSpacing(16),
+  //       vertical: ScreenUnitUtil.getSpacing(8),
+  //     ),
+  //     decoration: BoxDecoration(
+  //       color: Theme.of(context).colorScheme.surface,
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 4,
+  //           offset: const Offset(0, -2),
+  //         ),
+  //       ],
+  //     ),
+  //     child: SafeArea(
+  //       child: Row(
+  //         children: [
+  //           Expanded(
+  //             child: TextField(
+  //               controller: viewModel.messageController,
+  //               decoration: InputDecoration(
+  //                 hintText: 'Type a message...',
+  //                 border: OutlineInputBorder(
+  //                   borderRadius: BorderRadius.circular(
+  //                     ScreenUnitUtil.getSpacing(24),
+  //                   ),
+  //                   borderSide: BorderSide.none,
+  //                 ),
+  //                 filled: true,
+  //                 fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+  //                 contentPadding: EdgeInsets.symmetric(
+  //                   horizontal: ScreenUnitUtil.getSpacing(16),
+  //                   vertical: ScreenUnitUtil.getSpacing(12),
+  //                 ),
+  //               ),
+  //               maxLines: null,
+  //               textInputAction: TextInputAction.send,
+  //               onSubmitted: (_) => viewModel.sendMessage().then((_) {
+  //                 _scrollToBottom();
+  //               }),
+  //             ),
+  //           ),
+  //           SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+  //           Container(
+  //             decoration: BoxDecoration(
+  //               color: AppColors.secondary,
+  //               shape: BoxShape.circle,
+  //             ),
+  //             child: IconButton(
+  //               icon: const Icon(Icons.send, color: Colors.white),
+  //               onPressed: () {
+  //                 viewModel.sendMessage().then((_) {
+  //                   _scrollToBottom();
+  //                 });
+  //               },
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   String _formatMessageTime(DateTime time) {
     // Convert UTC time to local time

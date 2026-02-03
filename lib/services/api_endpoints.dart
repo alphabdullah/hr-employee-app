@@ -461,6 +461,16 @@ class ApiEndpoints {
   /// - Supports pagination
   static const String getMyGroupChats = '/group-chats';
 
+  /// Get all groups the authenticated user is a member of
+  /// 
+  /// **Method:** GET
+  /// **Path:** /api/me/groups
+  /// **Auth:** Required (Bearer token)
+  /// 
+  /// **Query Parameters:**
+  /// - per_page (int, optional): Items per page (default: 15)
+  /// 
+  static const String getMyGroups = '/api/me/groups';
   /// Get all messages for a specific group chat
   /// 
   /// **Method:** GET
@@ -477,7 +487,7 @@ class ApiEndpoints {
   /// - Only accessible to group members
   /// - Returns messages with sender information and timestamps
   /// - Supports pagination
-  static String getGroupChatMessages(String id) => '/group-chats/$id/messages';
+  static String getGroupChatMessages(String id) => '/api/me/groups/$id/messages';
 
   /// Send a message to a group chat
   /// 
@@ -495,7 +505,7 @@ class ApiEndpoints {
   /// **Note:**
   /// - Only group members can send messages
   /// - Employees cannot send messages if the job is Closed or Filled (admin can always send)
-  static String sendGroupChatMessage(String id) => '/group-chats/$id/messages';
+  static String sendGroupChatMessage(String id) => '/api/me/groups/$id/messages';
 
   // ============================================================================
   // NOTIFICATIONS ENDPOINTS

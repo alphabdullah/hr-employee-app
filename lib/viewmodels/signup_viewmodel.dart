@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/register_flow_models.dart';
 import '../services/api_client.dart';
 import '../services/api_endpoints.dart';
@@ -25,6 +28,10 @@ class SignUpViewModel extends ChangeNotifier {
   bool _isStepLoading = false; // Loading state for individual step submission
   bool _isLoadingProfile = false; // Loading state for profile data
   bool _hasLoadedMeData = false;
+
+  bool _isPostcodeLoading = false;
+  bool get isPostcodeLoading => _isPostcodeLoading;
+
 
   // Getters
   int get currentStep => _currentStep;
@@ -220,6 +227,68 @@ class SignUpViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // New update methods
+  void updateStep1Region(String? value) {
+    _step1Model = _step1Model.copyWith(region: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep1District(String? value) {
+    _step1Model = _step1Model.copyWith(district: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  // Debounce timer for postcode lookup
+  Timer? _debounceTimer;
+
+  /// Fetch postcode data from postcodes.io API
+  Future<void> fetchPostcodeData(String postcode) async {
+    // Cancel existing debounce
+    _debounceTimer?.cancel();
+
+    // Debounce: wait 500ms after typing stops
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      if (postcode.isEmpty) {
+        // Clear fields if postcode is cleared
+        updateStep1Country(null);
+        updateStep1Region(null);
+        updateStep1District(null);
+        return;
+      }
+
+      _isPostcodeLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      try {
+        final url = 'https://api.postcodes.io/postcodes/$postcode';
+        final response = await http.get(Uri.parse(url));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final result = data['result'] as Map<String, dynamic>?;
+
+          if (result != null) {
+            updateStep1Country(result['country'] as String?);
+            updateStep1Region(result['region'] as String?);
+            updateStep1District(result['admin_district'] as String?); // Suggest district, user can edit
+          } else {
+            _errorMessage = 'No data found for this postcode.';
+          }
+        } else {
+          _errorMessage = 'Invalid postcode. Please try again.';
+        }
+      } catch (e) {
+        _errorMessage = 'Network error during postcode lookup: ${e.toString()}';
+      } finally {
+        _isPostcodeLoading = false;
+        notifyListeners();
+      }
+    });
+  }
+
   /// Validate Step 1
   String? validateStep1() {
     if (_step1Model.name.isEmpty) {
@@ -344,6 +413,11 @@ class SignUpViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   // ============================================================================
@@ -1086,5 +1160,6 @@ class SignUpViewModel extends ChangeNotifier {
     _errorMessage = null;
     _hasLoadedMeData = false;
     notifyListeners();
+    _isPostcodeLoading = false;
   }
 }

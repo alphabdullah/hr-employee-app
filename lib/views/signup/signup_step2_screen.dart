@@ -380,6 +380,7 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
             RouteNames.signUpStep3,
             arguments: {'isEditMode': false},
           );
+          ToastMessage.showSuccess('Compliance information saved successfully!', context);
         }
       } else if (mounted && viewModel.errorMessage != null) {
         ToastMessage.showError(viewModel.errorMessage!, context);

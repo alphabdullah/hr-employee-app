@@ -263,7 +263,7 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
         if (token != null && token.isNotEmpty) {
           // User is logged in - navigate to home
           Navigator.of(context).pushNamedAndRemoveUntil(
-            RouteNames.home,
+            RouteNames.login,
             (route) => false,
           );
           ToastMessage.showSuccess('Registration completed successfully!', context);

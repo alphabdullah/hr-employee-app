@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../views/chat_detail_screen.dart';
 import '../views/splash_screen.dart';
 import '../views/login_screen.dart';
 import '../views/signup/signup_screen.dart';
@@ -130,6 +131,33 @@ class AppRouter {
       case RouteNames.pendingDashboard:
         return MaterialPageRoute(
           builder: (_) => const PendingProfileLandingScreen(),
+          settings: settings,
+        );
+
+      // ───────────────────────────────────────────────
+      // NEW: Chat Detail Screen (group chat)
+      // ───────────────────────────────────────────────
+      case RouteNames.chatDetail:
+        if (args is Map<String, dynamic> && args.containsKey('groupId')) {
+          final groupId = args['groupId'] as String;
+          final groupName = args['groupName'] as String?;
+          // You can add more args later (region, avatarUrl, etc.)
+
+          return MaterialPageRoute(
+            builder: (_) => ChatDetailScreen(
+              groupId: groupId,
+              groupName: groupName ?? 'Group Chat',
+              // Pass more if your screen constructor supports it
+            ),
+            settings: settings,
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => Scaffold(
+            body: Center(
+              child: Text('Invalid group chat arguments'),
+            ),
+          ),
           settings: settings,
         );
 

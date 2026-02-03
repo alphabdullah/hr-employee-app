@@ -220,6 +220,7 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
           RouteNames.signUpStep4,
           arguments: {'isEditMode': false},
         );
+        ToastMessage.showSuccess('Availability saved successfully!', context);
       }
     } else if (mounted && viewModel.errorMessage != null) {
       ToastMessage.showError(viewModel.errorMessage!, context);
