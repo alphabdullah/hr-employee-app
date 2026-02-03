@@ -9,7 +9,6 @@ import '../services/api_client.dart';
 import '../services/api_endpoints.dart';
 import '../services/auth_service.dart';
 import '../utils/toast_message.dart';
-import 'profile_screen.dart';
 
 /// Settings Screen View
 class SettingsScreen extends StatelessWidget {
@@ -36,21 +35,21 @@ class SettingsScreen extends StatelessWidget {
           vertical: ScreenUnitUtil.getSpacing(8),
         ),
         children: [
-          // Profile Section
-          _buildSettingsItem(
-            context: context,
-            icon: Icons.person_outline,
-            title: 'Profile',
-            subtitle: 'View and edit your profile',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfileScreen(),
-                ),
-              );
-            },
-          ),
+          // // Profile Section
+          // _buildSettingsItem(
+          //   context: context,
+          //   icon: Icons.person_outline,
+          //   title: 'Profile',
+          //   subtitle: 'View and edit your profile',
+          //   onTap: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //         builder: (_) => const ProfileScreen(),
+          //       ),
+          //     );
+          //   },
+          // ),
           Divider(
             height: 1,
             thickness: 1,

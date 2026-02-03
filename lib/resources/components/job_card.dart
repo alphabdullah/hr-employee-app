@@ -520,25 +520,25 @@ String _buildPayText(JobModel job) {
   }
 
   Future<void> _handleCheckIn(BuildContext context, JobViewModel viewModel, ApplicationData applicationData) async {
-    final success = await viewModel.checkIn();
-    if (success && context.mounted) {
-      await viewModel.loadMyApplications(forceRefresh: true);
-      if (context.mounted) {
-        ToastMessage.showSuccess('Successfully checked in!', context);
-      }
-    } else if (context.mounted) {
+    final success = await viewModel.checkIn(jobId: applicationData.job.id);
+    if (!context.mounted) return;
+    
+    if (success) {
+      ToastMessage.showSuccess('Successfully checked in!', context);
+      // Refresh happens in checkIn() method, no need to call again
+    } else {
       ToastMessage.showError(viewModel.errorMessage ?? 'Failed to check in. Please try again.', context);
     }
   }
 
   Future<void> _handleCheckOut(BuildContext context, JobViewModel viewModel, ApplicationData applicationData) async {
-    final success = await viewModel.checkOut();
-    if (success && context.mounted) {
-      await viewModel.loadMyApplications(forceRefresh: true);
-      if (context.mounted) {
-        ToastMessage.showSuccess('Successfully checked out!', context);
-      }
-    } else if (context.mounted) {
+    final success = await viewModel.checkOut(jobId: applicationData.job.id);
+    if (!context.mounted) return;
+    
+    if (success) {
+      ToastMessage.showSuccess('Successfully checked out!', context);
+      // Refresh happens in checkOut() method, no need to call again
+    } else {
       ToastMessage.showError(viewModel.errorMessage ?? 'Failed to check out. Please try again.', context);
     }
   }
@@ -625,6 +625,5 @@ String _buildPayText(JobModel job) {
       ),
     );
   }
-
 
 }

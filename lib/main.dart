@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/signup_viewmodel.dart';
 import 'viewmodels/forgot_password_viewmodel.dart';
-import 'viewmodels/profile_viewmodel.dart';
+// import 'viewmodels/profile_viewmodel.dart';
 import 'viewmodels/chat_viewmodel.dart';
 import 'viewmodels/settings_viewmodel.dart';
 import 'viewmodels/job_viewmodel.dart';
@@ -57,7 +57,7 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => LoginViewModel()),
             ChangeNotifierProvider(create: (_) => SignUpViewModel()),
             ChangeNotifierProvider(create: (_) => ForgotPasswordViewModel()),
-            ChangeNotifierProvider(create: (_) => ProfileViewModel()),
+            // ChangeNotifierProvider(create: (_) => ProfileViewModel()),
             ChangeNotifierProvider(create: (_) => ChatViewModel()),
             ChangeNotifierProvider(create: (_) => SettingsViewModel()),
             ChangeNotifierProvider(create: (_) => JobViewModel()),

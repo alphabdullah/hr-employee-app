@@ -286,70 +286,6 @@ Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
     ),
   );
 }
-  // Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
-  //   return Container(
-  //     padding: EdgeInsets.symmetric(
-  //       horizontal: ScreenUnitUtil.getSpacing(16),
-  //       vertical: ScreenUnitUtil.getSpacing(8),
-  //     ),
-  //     decoration: BoxDecoration(
-  //       color: Theme.of(context).colorScheme.surface,
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: Colors.black.withOpacity(0.05),
-  //           blurRadius: 4,
-  //           offset: const Offset(0, -2),
-  //         ),
-  //       ],
-  //     ),
-  //     child: SafeArea(
-  //       child: Row(
-  //         children: [
-  //           Expanded(
-  //             child: TextField(
-  //               controller: viewModel.messageController,
-  //               decoration: InputDecoration(
-  //                 hintText: 'Type a message...',
-  //                 border: OutlineInputBorder(
-  //                   borderRadius: BorderRadius.circular(
-  //                     ScreenUnitUtil.getSpacing(24),
-  //                   ),
-  //                   borderSide: BorderSide.none,
-  //                 ),
-  //                 filled: true,
-  //                 fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-  //                 contentPadding: EdgeInsets.symmetric(
-  //                   horizontal: ScreenUnitUtil.getSpacing(16),
-  //                   vertical: ScreenUnitUtil.getSpacing(12),
-  //                 ),
-  //               ),
-  //               maxLines: null,
-  //               textInputAction: TextInputAction.send,
-  //               onSubmitted: (_) => viewModel.sendMessage().then((_) {
-  //                 _scrollToBottom();
-  //               }),
-  //             ),
-  //           ),
-  //           SizedBox(width: ScreenUnitUtil.getSpacing(8)),
-  //           Container(
-  //             decoration: BoxDecoration(
-  //               color: AppColors.secondary,
-  //               shape: BoxShape.circle,
-  //             ),
-  //             child: IconButton(
-  //               icon: const Icon(Icons.send, color: Colors.white),
-  //               onPressed: () {
-  //                 viewModel.sendMessage().then((_) {
-  //                   _scrollToBottom();
-  //                 });
-  //               },
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   String _formatMessageTime(DateTime time) {
     // Convert UTC time to local time
@@ -408,184 +344,184 @@ Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
     }
   }
 
-  Widget _buildJobImage(String? imageUrl) {
-    final radius = ScreenUnitUtil.getWidth(20);
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: AppColors.secondary.withOpacity(0.1),
-        backgroundImage: NetworkImage(_getImageUrl(imageUrl)),
-        onBackgroundImageError: (_, __) {},
-      );
-    }
+  // Widget _buildJobImage(String? imageUrl) {
+  //   final radius = ScreenUnitUtil.getWidth(20);
+  //   if (imageUrl != null && imageUrl.isNotEmpty) {
+  //     return CircleAvatar(
+  //       radius: radius,
+  //       backgroundColor: AppColors.secondary.withOpacity(0.1),
+  //       backgroundImage: NetworkImage(_getImageUrl(imageUrl)),
+  //       onBackgroundImageError: (_, __) {},
+  //     );
+  //   }
 
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: AppColors.secondary.withOpacity(0.1),
-      child: Icon(
-        Icons.work_outline,
-        size: ScreenUnitUtil.getFontSize(20),
-        color: AppColors.secondary,
-      ),
-    );
-  }
+  //   return CircleAvatar(
+  //     radius: radius,
+  //     backgroundColor: AppColors.secondary.withOpacity(0.1),
+  //     child: Icon(
+  //       Icons.work_outline,
+  //       size: ScreenUnitUtil.getFontSize(20),
+  //       color: AppColors.secondary,
+  //     ),
+  //   );
+  // }
 
-  void _showParticipantsDialog(BuildContext context, ChatDetailViewModel viewModel) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(ScreenUnitUtil.getSpacing(20)),
-        ),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: EdgeInsets.only(top: ScreenUnitUtil.getSpacing(12)),
-              width: ScreenUnitUtil.getWidth(40),
-              height: ScreenUnitUtil.getHeight(4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(2)),
-              ),
-            ),
-            // Title
-            Padding(
-              padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
-              child: Row(
-                children: [
-                  Text(
-                    'Participants',
-                    style: TextStyle(
-                      fontSize: ScreenUnitUtil.getFontSize(20),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(width: ScreenUnitUtil.getSpacing(8)),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ScreenUnitUtil.getSpacing(8),
-                      vertical: ScreenUnitUtil.getSpacing(4),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(12)),
-                    ),
-                    child: Text(
-                      '${viewModel.participants.length}',
-                      style: TextStyle(
-                        fontSize: ScreenUnitUtil.getFontSize(14),
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.secondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1),
-            // Participants list
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                padding: EdgeInsets.symmetric(
-                  vertical: ScreenUnitUtil.getSpacing(8),
-                ),
-                itemCount: viewModel.participants.length,
-                itemBuilder: (context, index) {
-                  final participant = viewModel.participants[index];
-                  final fullName = participant['full_name']?.toString() ?? 'Unknown';
-                  final email = participant['email']?.toString() ?? '';
-                  final profileImage = participant['profile_image'];
-                  final role = participant['role']?.toString() ?? 'member';
-                  final String? profileImageUrl;
-                  if (profileImage == null || profileImage == 'null' || profileImage.toString().isEmpty) {
-                    profileImageUrl = null;
-                  } else {
-                    profileImageUrl = profileImage.toString();
-                  }
+  // void _showParticipantsDialog(BuildContext context, ChatDetailViewModel viewModel) {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(
+  //         top: Radius.circular(ScreenUnitUtil.getSpacing(20)),
+  //       ),
+  //     ),
+  //     builder: (context) => DraggableScrollableSheet(
+  //       initialChildSize: 0.7,
+  //       minChildSize: 0.5,
+  //       maxChildSize: 0.95,
+  //       expand: false,
+  //       builder: (context, scrollController) => Column(
+  //         children: [
+  //           // Handle bar
+  //           Container(
+  //             margin: EdgeInsets.only(top: ScreenUnitUtil.getSpacing(12)),
+  //             width: ScreenUnitUtil.getWidth(40),
+  //             height: ScreenUnitUtil.getHeight(4),
+  //             decoration: BoxDecoration(
+  //               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+  //               borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(2)),
+  //             ),
+  //           ),
+  //           // Title
+  //           Padding(
+  //             padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
+  //             child: Row(
+  //               children: [
+  //                 Text(
+  //                   'Participants',
+  //                   style: TextStyle(
+  //                     fontSize: ScreenUnitUtil.getFontSize(20),
+  //                     fontWeight: FontWeight.w600,
+  //                   ),
+  //                 ),
+  //                 SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+  //                 Container(
+  //                   padding: EdgeInsets.symmetric(
+  //                     horizontal: ScreenUnitUtil.getSpacing(8),
+  //                     vertical: ScreenUnitUtil.getSpacing(4),
+  //                   ),
+  //                   decoration: BoxDecoration(
+  //                     color: AppColors.secondary.withOpacity(0.1),
+  //                     borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(12)),
+  //                   ),
+  //                   child: Text(
+  //                     '${viewModel.participants.length}',
+  //                     style: TextStyle(
+  //                       fontSize: ScreenUnitUtil.getFontSize(14),
+  //                       fontWeight: FontWeight.w600,
+  //                       color: AppColors.secondary,
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           Divider(height: 1),
+  //           // Participants list
+  //           Expanded(
+  //             child: ListView.builder(
+  //               controller: scrollController,
+  //               padding: EdgeInsets.symmetric(
+  //                 vertical: ScreenUnitUtil.getSpacing(8),
+  //               ),
+  //               itemCount: viewModel.participants.length,
+  //               itemBuilder: (context, index) {
+  //                 final participant = viewModel.participants[index];
+  //                 final fullName = participant['full_name']?.toString() ?? 'Unknown';
+  //                 final email = participant['email']?.toString() ?? '';
+  //                 final profileImage = participant['profile_image'];
+  //                 final role = participant['role']?.toString() ?? 'member';
+  //                 final String? profileImageUrl;
+  //                 if (profileImage == null || profileImage == 'null' || profileImage.toString().isEmpty) {
+  //                   profileImageUrl = null;
+  //                 } else {
+  //                   profileImageUrl = profileImage.toString();
+  //                 }
                   
-                  return ListTile(
-                    leading: _buildParticipantAvatar(profileImageUrl),
-                    title: Text(
-                      fullName,
-                      style: TextStyle(
-                        fontSize: ScreenUnitUtil.getFontSize(16),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: email.isNotEmpty
-                        ? Text(
-                            email,
-                            style: TextStyle(
-                              fontSize: ScreenUnitUtil.getFontSize(14),
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                          )
-                        : null,
-                    trailing: role == 'admin'
-                        ? Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: ScreenUnitUtil.getSpacing(8),
-                              vertical: ScreenUnitUtil.getSpacing(4),
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
-                            ),
-                            child: Text(
-                              'Admin',
-                              style: TextStyle(
-                                fontSize: ScreenUnitUtil.getFontSize(12),
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.secondary,
-                              ),
-                            ),
-                          )
-                        : null,
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  //                 return ListTile(
+  //                   leading: _buildParticipantAvatar(profileImageUrl),
+  //                   title: Text(
+  //                     fullName,
+  //                     style: TextStyle(
+  //                       fontSize: ScreenUnitUtil.getFontSize(16),
+  //                       fontWeight: FontWeight.w500,
+  //                     ),
+  //                   ),
+  //                   subtitle: email.isNotEmpty
+  //                       ? Text(
+  //                           email,
+  //                           style: TextStyle(
+  //                             fontSize: ScreenUnitUtil.getFontSize(14),
+  //                             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+  //                           ),
+  //                         )
+  //                       : null,
+  //                   trailing: role == 'admin'
+  //                       ? Container(
+  //                           padding: EdgeInsets.symmetric(
+  //                             horizontal: ScreenUnitUtil.getSpacing(8),
+  //                             vertical: ScreenUnitUtil.getSpacing(4),
+  //                           ),
+  //                           decoration: BoxDecoration(
+  //                             color: AppColors.secondary.withOpacity(0.1),
+  //                             borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
+  //                           ),
+  //                           child: Text(
+  //                             'Admin',
+  //                             style: TextStyle(
+  //                               fontSize: ScreenUnitUtil.getFontSize(12),
+  //                               fontWeight: FontWeight.w600,
+  //                               color: AppColors.secondary,
+  //                             ),
+  //                           ),
+  //                         )
+  //                       : null,
+  //                 );
+  //               },
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildParticipantAvatar(String? profileImageUrl) {
-    if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: ScreenUnitUtil.getWidth(24),
-        backgroundColor: AppColors.secondary.withOpacity(0.1),
-        backgroundImage: NetworkImage(_getImageUrl(profileImageUrl)),
-        onBackgroundImageError: (exception, stackTrace) {
-          // Image failed to load - will show background color only
-        },
-        // Don't set child here to avoid icon overlay on successful image load
-      );
-    }
+  // Widget _buildParticipantAvatar(String? profileImageUrl) {
+  //   if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+  //     return CircleAvatar(
+  //       radius: ScreenUnitUtil.getWidth(24),
+  //       backgroundColor: AppColors.secondary.withOpacity(0.1),
+  //       backgroundImage: NetworkImage(_getImageUrl(profileImageUrl)),
+  //       onBackgroundImageError: (exception, stackTrace) {
+  //         // Image failed to load - will show background color only
+  //       },
+  //       // Don't set child here to avoid icon overlay on successful image load
+  //     );
+  //   }
     
-    return CircleAvatar(
-      radius: ScreenUnitUtil.getWidth(24),
-      backgroundColor: AppColors.secondary.withOpacity(0.1),
-      child: _buildParticipantAvatarIcon(),
-    );
-  }
+  //   return CircleAvatar(
+  //     radius: ScreenUnitUtil.getWidth(24),
+  //     backgroundColor: AppColors.secondary.withOpacity(0.1),
+  //     child: _buildParticipantAvatarIcon(),
+  //   );
+  // }
 
-  Widget _buildParticipantAvatarIcon() {
-    return Icon(
-      Icons.person,
-      size: ScreenUnitUtil.getFontSize(24),
-      color: AppColors.secondary,
-    );
-  }
+  // Widget _buildParticipantAvatarIcon() {
+  //   return Icon(
+  //     Icons.person,
+  //     size: ScreenUnitUtil.getFontSize(24),
+  //     color: AppColors.secondary,
+  //   );
+  // }
 }
 

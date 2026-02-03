@@ -189,13 +189,6 @@ class ApiEndpoints {
   // PROFILE MANAGEMENT ENDPOINTS
   // ============================================================================
 
-  /// Get the authenticated employee's profile information
-  /// 
-  /// **Method:** GET
-  /// **Path:** /profile
-  /// **Auth:** Required (Bearer token)
-  static const String getProfile = '/profile';
-
   /// Get authenticated user's complete profile data including all steps
   /// 
   /// **Method:** GET
@@ -289,86 +282,6 @@ class ApiEndpoints {
   /// - sort_code (string, max 20)
   static const String updateProfileStep4 = '/api/me/step-4';
 
-  /// Update profile information (without image)
-  /// 
-  /// **Method:** PUT
-  /// **Path:** /profile
-  /// **Auth:** Required (Bearer token)
-  /// **Content-Type:** application/json
-  /// 
-  /// **Updatable Fields (all optional):**
-  /// - full_name (string)
-  /// - email (string, must remain unique)
-  /// - skills (array, min: 1, max: 8)
-  /// 
-  /// **Note:** Skills list replaces old values, it does not append
-  static const String updateProfile = '/profile';
-
-  /// Update profile with profile image upload
-  /// 
-  /// **Method:** PUT
-  /// **Path:** /profile
-  /// **Auth:** Required (Bearer token)
-  /// **Content-Type:** multipart/form-data
-  /// 
-  /// **Form Data Fields:**
-  /// - full_name (string, optional)
-  /// - email (string, optional)
-  /// - skills (string, JSON array as string, optional)
-  /// - profile_image (file, optional)
-  /// 
-  /// **File Requirements:**
-  /// - Image file (jpeg, png, jpg, gif)
-  /// - Maximum size: 2MB
-  static const String updateProfileWithImage = '/profile';
-
-  // ============================================================================
-  // JOBS ENDPOINTS
-  // ============================================================================
-
-  /// Get all jobs visible to employees
-  /// 
-  /// **Method:** GET
-  /// **Path:** /jobs
-  /// **Auth:** Required (Bearer token)
-  /// 
-  /// **Query Parameters:**
-  /// - status (string, optional): Filter by status - "Open" or "Closed" (default: "Open")
-  /// - per_page (int, optional): Items per page (default: 15)
-  /// 
-  /// **Note:** 
-  /// - Only shows 'Open' jobs by default
-  /// - Jobs with status 'Filled' are never displayed
-  /// - Supports pagination and status filtering (Open/Closed only)
-  static const String getAllJobs = '/jobs';
-
-  /// Get a specific job by ID
-  /// 
-  /// **Method:** GET
-  /// **Path:** /jobs/:id
-  /// **Auth:** Required (Bearer token)
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Job ID
-  /// 
-  /// **Note:** Only accessible if job status is not 'Filled'
-  static String getJobById(String id) => '/jobs/$id';
-
-  /// Apply for an open job
-  /// 
-  /// **Method:** POST
-  /// **Path:** /jobs/:id/apply
-  /// **Auth:** Required (Bearer token)
-  /// 
-  /// **Path Parameters:**
-  /// - id (string): Job ID
-  /// 
-  /// **Note:** 
-  /// - Employees can apply only once per job
-  /// - Cannot apply if already assigned to another job on the same day
-  /// - Application status will be 'Applied' and timestamp will be recorded
-  static String applyForJob(String id) => '/jobs/$id/apply';
-
   /// Punch in (start job) for a selected employee
   /// 
   /// **Method:** POST
@@ -384,7 +297,7 @@ class ApiEndpoints {
   /// - Only allowed between the job's duration_start_time and 1 hour after start
   /// - Employee must not have another active job 'In Progress' on the same day
   /// - On success, application status is updated to 'In Progress' and 'punch_in_at' timestamp is recorded
-  static String punchIn(String id) => '/jobs/$id/punch-in';
+  static String punchIn(String id) => '/api/me/jobs/$id/punch-in';
 
   /// Punch out (complete job) for an employee
   /// 
@@ -401,22 +314,7 @@ class ApiEndpoints {
   /// - Only allowed at or after the job's duration_end_time (not before)
   /// - On success, application status is updated to 'Completed' and 'punch_out_at' timestamp is recorded
   /// - Punch-out is mandatory for job closure
-  static String punchOut(String id) => '/jobs/$id/punch-out';
-
-  /// Get all job applications submitted by the authenticated employee
-  /// 
-  /// **Method:** GET
-  /// **Path:** /my-applications
-  /// **Auth:** Required (Bearer token)
-  /// 
-  /// **Query Parameters:**
-  /// - per_page (int, optional): Items per page (default: 15)
-  /// 
-  /// **Note:**
-  /// - Returns full job details including job title, job location, job description, job duration, job date, job image
-  /// - Includes application status (Applied, Selected, In Progress, Completed, Rejected)
-  /// - Supports pagination
-  static const String getMyApplications = '/my-applications';
+  static String punchOut(String id) => '/api/me/jobs/$id/punch-out';
 
   /// Get authenticated user's jobs (my jobs list)
   /// 
@@ -426,6 +324,15 @@ class ApiEndpoints {
   /// 
   /// **Response:** Returns jobs list with job title, client, dates, status, image
   static const String getMyJobs = '/api/me/jobs';
+
+  /// Get authenticated user's attendance records
+  /// 
+  /// **Method:** GET
+  /// **Path:** /api/me/attendance
+  /// **Auth:** Required (Bearer token)
+  /// 
+  /// **Response:** Returns attendance list with punch_in_at, punch_out_at, job details
+  static const String getMyAttendance = '/api/me/attendance';
 
   // ============================================================================
   // SKILLS MANAGEMENT ENDPOINTS
@@ -445,21 +352,6 @@ class ApiEndpoints {
   // ============================================================================
   // GROUP CHATS ENDPOINTS
   // ============================================================================
-
-  /// Get all group chats the authenticated user is a member of
-  /// 
-  /// **Method:** GET
-  /// **Path:** /group-chats
-  /// **Auth:** Required (Bearer token)
-  /// 
-  /// **Query Parameters:**
-  /// - per_page (int, optional): Items per page (default: 15)
-  /// 
-  /// **Note:**
-  /// - Group chats are automatically created when a job is fully assigned
-  /// - Returns group chat details, job information, member count, and whether user can send messages
-  /// - Supports pagination
-  static const String getMyGroupChats = '/group-chats';
 
   /// Get all groups the authenticated user is a member of
   /// 

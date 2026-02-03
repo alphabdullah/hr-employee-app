@@ -211,8 +211,8 @@ class ApiClient {
             );
           }
           
-          // Open file stream
-          final fileStream = file.openRead();
+          // // Open file stream
+          // final fileStream = file.openRead();
           
           // Extract filename - handle both Windows (\) and Unix (/) paths
           final pathSeparator = Platform.isWindows ? '\\' : '/';

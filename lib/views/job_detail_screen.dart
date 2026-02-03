@@ -20,14 +20,15 @@ class JobDetailScreen extends StatefulWidget {
 }
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
-  bool _isApplying = false;
 
   @override
   void initState() {
     super.initState();
-    // Load user's applications to check if they've already applied
+    // Load user's applications and attendance to check if they've already applied/punched
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<JobViewModel>().loadMyApplications();
+      final viewModel = context.read<JobViewModel>();
+      viewModel.loadMyApplications();
+      viewModel.fetchAttendance();
     });
   }
 
@@ -118,16 +119,54 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   Consumer<JobViewModel>(
                     builder: (context, viewModel, child) {
                       final applicationData = viewModel.getApplicationDataForJob(widget.job.id);
+                      final isCompletedToday = viewModel.isJobCompletedToday(widget.job.id);
                       final status = applicationData?.status.toLowerCase();
                       final isInProgress = status == 'in progress';
-                      final shouldShowCheckOut = isInProgress && applicationData != null && viewModel.shouldShowCheckOutButton(applicationData);
+                      final shouldShowCheckOut = !isCompletedToday && isInProgress && applicationData != null && viewModel.shouldShowCheckOutButton(applicationData);
                       
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildStatusBadge(widget.job.jobStatus),
-                          // Show "Job In Progress" status when Check Out button is available
-                          if (shouldShowCheckOut) ...[
+                          // Show "Job Completed" if punch out exists for today
+                          if (isCompletedToday) ...[
+                            SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: ScreenUnitUtil.getSpacing(16),
+                                vertical: ScreenUnitUtil.getSpacing(12),
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor('completed').withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                border: Border.all(
+                                  color: _getStatusColor('completed').withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _getStatusIcon('completed'),
+                                    size: ScreenUnitUtil.getFontSize(18),
+                                    color: _getStatusColor('completed'),
+                                  ),
+                                  SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+                                  Text(
+                                    'Job Completed',
+                                    style: TextStyle(
+                                      fontSize: ScreenUnitUtil.getFontSize(14),
+                                      fontWeight: FontWeight.w600,
+                                      color: _getStatusColor('completed'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else if (shouldShowCheckOut) ...[
+                            // Show "Job In Progress" status when Check Out button is available
                             SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                             Container(
                               padding: EdgeInsets.symmetric(
@@ -265,25 +304,25 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _formatShiftType(widget.job.shiftType!),
                     ),
                   ],
-                  if (widget.job.jobDuration != null && widget.job.jobDuration!.isNotEmpty) ...[
-                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                    _buildDetailRow(
-                      Icons.access_time_outlined,
-                      'Duration',
-                      widget.job.jobDuration!,
-                    ),
-                  ] else ...[
-                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                    _buildDetailRow(
-                      Icons.access_time_outlined,
-                      'Duration',
-                      _buildDurationText(widget.job),
-                    ),
-                  ],
-                  if (widget.job.jobDays != null && widget.job.jobDays!.isNotEmpty) ...[
-                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                    _buildJobDaysRow(context, widget.job.jobDays!),
-                  ],
+                  // if (widget.job.jobDuration != null && widget.job.jobDuration!.isNotEmpty) ...[
+                  //   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  //   _buildDetailRow(
+                  //     Icons.access_time_outlined,
+                  //     'Duration',
+                  //     widget.job.jobDuration!,
+                  //   ),
+                  // ] else ...[
+                  //   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  //   _buildDetailRow(
+                  //     Icons.access_time_outlined,
+                  //     'Duration',
+                  //     _buildDurationText(widget.job),
+                  //   ),
+                  // ],
+                  // if (widget.job.jobDays != null && widget.job.jobDays!.isNotEmpty) ...[
+                  //   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  //   _buildJobDaysRow(context, widget.job.jobDays!),
+                  // ],
 
                   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
 
@@ -293,10 +332,40 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       if (!_isJobDateToday()) return const SizedBox.shrink();
                       final applicationData = viewModel.getApplicationDataForJob(widget.job.id);
                       if (applicationData == null) return const SizedBox.shrink();
+                      
+                      // Check if job is completed today
+                      final isCompletedToday = viewModel.isJobCompletedToday(widget.job.id);
+                      if (isCompletedToday) {
+                        return Container(
+                          padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(12)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              SizedBox(width: ScreenUnitUtil.getSpacing(12)),
+                              Text(
+                                'Job Completed',
+                                style: TextStyle(
+                                  fontSize: ScreenUnitUtil.getFontSize(16),
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
                       final status = applicationData.status.toLowerCase();
                       final isInProgress = status == 'in progress';
                       final shouldShowCheckIn = !isInProgress && viewModel.shouldShowCheckInButton(applicationData);
-                      final shouldShowCheckOut = isInProgress && viewModel.shouldShowCheckOutButton(applicationData);
+                      final shouldShowCheckOut = viewModel.shouldShowCheckOutButton(applicationData);
                       
                       if (shouldShowCheckIn || shouldShowCheckOut) {
                         return Column(
@@ -620,41 +689,41 @@ String _buildPayText(JobModel job) {
     );
   }
 
-  Future<void> _handleApply(BuildContext context, JobViewModel viewModel) async {
-    setState(() {
-      _isApplying = true;
-    });
+  // Future<void> _handleApply(BuildContext context, JobViewModel viewModel) async {
+  //   setState(() {
+  //     _isApplying = true;
+  //   });
 
-    final success = await viewModel.applyForJob(widget.job.id);
+  //   final success = await viewModel.applyForJob(widget.job.id);
 
-    if (mounted) {
-      setState(() {
-        _isApplying = false;
-      });
+  //   if (mounted) {
+  //     setState(() {
+  //       _isApplying = false;
+  //     });
 
-      if (success) {
-        // Reload applications to get updated status
-        await viewModel.loadMyApplications();
+  //     if (success) {
+  //       // Reload applications to get updated status
+  //       await viewModel.loadMyApplications();
         
-        if (mounted) {
-          ToastMessage.showSuccess(
-            'Your application has been submitted successfully!',
-            context,
-          );
-        }
-      } else {
-        // Show error message from API or default message
-        if (mounted) {
-          final errorMessage = viewModel.errorMessage ?? 
-              'Failed to submit application. Please try again.';
-          ToastMessage.showError(
-            errorMessage,
-            context,
-          );
-        }
-      }
-    }
-  }
+  //       if (mounted) {
+  //         ToastMessage.showSuccess(
+  //           'Your application has been submitted successfully!',
+  //           context,
+  //         );
+  //       }
+  //     } else {
+  //       // Show error message from API or default message
+  //       if (mounted) {
+  //         final errorMessage = viewModel.errorMessage ?? 
+  //             'Failed to submit application. Please try again.';
+  //         ToastMessage.showError(
+  //           errorMessage,
+  //           context,
+  //         );
+  //       }
+  //     }
+  //   }
+  // }
 
   Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
@@ -751,7 +820,7 @@ String _buildPayText(JobModel job) {
                   ),
                   SizedBox(width: ScreenUnitUtil.getSpacing(8)),
                   Text(
-                    'Punch In',
+                    'Check In',
                     style: TextStyle(
                       fontSize: ScreenUnitUtil.getFontSize(16),
                       fontWeight: FontWeight.w600,
@@ -799,7 +868,7 @@ String _buildPayText(JobModel job) {
                   ),
                   SizedBox(width: ScreenUnitUtil.getSpacing(8)),
                   Text(
-                    'Punch Out',
+                    'Check Out',
                     style: TextStyle(
                       fontSize: ScreenUnitUtil.getFontSize(16),
                       fontWeight: FontWeight.w600,

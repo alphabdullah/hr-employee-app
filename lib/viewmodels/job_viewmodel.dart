@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/job_model.dart';
+import '../models/attendance_model.dart';
 import '../services/api_client.dart';
 import '../services/api_endpoints.dart';
 import '../services/auth_service.dart';
@@ -25,12 +26,14 @@ class JobViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isCheckedIn = false; // Track check-in status for active job
-  Map<String, String> _applicationStatuses = {}; // jobId -> application status (Applied, Selected, In Progress, Completed, Rejected)
+  Map<String, String> _applicationStatuses = {}; // jobId -> application status
   List<ApplicationData> _myApplications = []; // Full application data with job details
   bool _isLoadingApplications = false;
   bool _hasLoadedApplications = false; // Track if applications have been loaded at least once
   bool _isCheckingIn = false; // Track check-in operation in progress
   bool _isCheckingOut = false; // Track check-out operation in progress
+  List<AttendanceModel> _attendanceRecords = []; // Attendance records from API
+  bool _isLoadingAttendance = false;
 
   List<JobModel> get jobs => _jobs;
   bool get isLoading => _isLoading;
@@ -39,6 +42,7 @@ class JobViewModel extends ChangeNotifier {
   bool get isLoadingApplications => _isLoadingApplications;
   bool get isCheckingIn => _isCheckingIn;
   bool get isCheckingOut => _isCheckingOut;
+  bool get isLoadingAttendance => _isLoadingAttendance;
   List<ApplicationData> get myApplications => _myApplications;
   
   /// Get applications with "Applied" status (for pending tab)
@@ -70,61 +74,6 @@ class JobViewModel extends ChangeNotifier {
     }
   }
 
-  /// Load job posts from API
-  Future<void> loadJobs() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      // Get authentication token
-      final token = await AuthService.getToken();
-      
-      if (token == null || token.isEmpty) {
-        _errorMessage = 'Authentication required. Please login again.';
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      // Call jobs API endpoint
-      final response = await ApiClient.get(
-        ApiEndpoints.getAllJobs,
-        token: token,
-      );
-
-      _isLoading = false;
-
-      if (response.isSuccess) {
-        // Parse jobs array from response
-        final jobsList = response.getList<Map<String, dynamic>>('jobs');
-        
-        if (jobsList != null && jobsList.isNotEmpty) {
-          // Convert API jobs to JobModel list
-          _jobs = jobsList.map((jobJson) {
-            return JobModel.fromJson(jobJson);
-          }).toList();
-          
-          _errorMessage = null;
-        } else {
-          // No jobs found
-          _jobs = [];
-          _errorMessage = null;
-        }
-      } else {
-        _errorMessage = response.message;
-        _jobs = [];
-      }
-      
-      notifyListeners();
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = 'Failed to load job posts. Please try again.';
-      _jobs = [];
-      notifyListeners();
-    }
-  }
-
   /// Get job by ID
   JobModel? getJobById(String id) {
     try {
@@ -134,95 +83,182 @@ class JobViewModel extends ChangeNotifier {
     }
   }
 
-  /// Get active job (job where date is today AND user's application status is "Selected" or "In Progress")
-  /// Shows today's job whether user has checked in or not
-  ApplicationData? get activeJob {
+  /// Helper to check if a job is scheduled for a specific date (ignoring time)
+  bool _isJobScheduledForDate(JobModel job, DateTime date) {
+    // Check job_day_dates array first
+    if (job.jobDayDates != null && job.jobDayDates!.isNotEmpty) {
+      return job.jobDayDates!.any((d) => 
+        d.year == date.year && d.month == date.month && d.day == date.day
+      );
+    }
+    // Fallback to single jobDate
+    final jDate = job.jobDate;
+    return jDate.year == date.year && jDate.month == date.month && jDate.day == date.day;
+  }
+
+  /// Get active job based on "job_day_dates"
+  /// Returns a job if:
+  /// 1. Status is "Selected" or "In Progress"
+  /// 2. Today's date matches one of the dates in "job_day_dates" (or "jobDate")
+  /// Get active jobs based on "job_days" and "job_day_dates"
+  /// Returns jobs if:
+  /// 1. Status is "Selected" or "In Progress"
+  /// 2. Today's date matches one of the dates in "job_day_dates"
+  List<ApplicationData> get activeJobs {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
     
-    final activeAppsForToday = _myApplications.where((app) {
-      // Check if application status is "Selected" or "In Progress"
+    return _myApplications.where((app) {
+      // 1. Check Status
       final status = app.status.toLowerCase();
       if (status != 'selected' && status != 'in progress') {
         return false;
       }
       
-      // Check if today is one of the job's scheduled days (job_day_dates or jobDate)
-      return app.job.isDateScheduledFor(today);
+      // 2. Check Date (Active if today is in the schedule)
+      return _isJobScheduledForDate(app.job, now);
     }).toList();
-    
-    if (activeAppsForToday.isEmpty) {
-      return null;
-    }
-    
-    // Return the first active job for today (should only be one)
-    return activeAppsForToday.first;
   }
 
-  /// Check if check-in button should be shown for a job
+  /// Get active job (Legacy: returns first active job)
+  ApplicationData? get activeJob {
+    final jobs = activeJobs;
+    if (jobs.isEmpty) return null;
+
+    // Prioritize In Progress job
+    try {
+      return jobs.firstWhere((app) => app.status.toLowerCase() == 'in progress');
+    } catch (_) {
+      return jobs.first;
+    }
+  }
+
+  /// Check if Punch In button should be shown
   /// Returns true if:
-  /// - Job date is today
-  /// - Current time is between start time and 1 hour after start time
-  /// - User's application status is "In Progress" or "Selected"
+  /// - Today is in `job_day_dates`
+  /// - Status is 'Selected' or 'In Progress' (though usually 'Selected' shows Punch In)
   bool shouldShowCheckInButton(ApplicationData? application) {
     if (application == null) {
       return false;
     }
     
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
     
-    // Check if today is one of the job's scheduled days (job_day_dates or jobDate)
-    if (!application.job.isDateScheduledFor(today)) {
+    // 1. Verify Date: Must be scheduled for today
+    if (!_isJobScheduledForDate(application.job, now)) {
       return false;
     }
     
-    // Check application status (should be "In Progress" or "Selected")
+    // 2. Verify Status
     final status = application.status.toLowerCase();
-    if (status != 'in progress' && status != 'selected') {
+    // Show Punch In if Selected (waiting to start) or In Progress (if we want to allow re-punch/validation, but usually Selected)
+    if (status != 'selected' && status != 'in progress') {
       return false;
     }
     
-    // If no start time from API (e.g. /api/me/jobs), show Punch In all day on scheduled dates
-    final startTime = application.job.durationStartTime;
-    if (startTime == null || startTime.isEmpty) {
-      return true;
+    return true;
+  }
+
+  /// Fetch attendance records from API
+  /// [silent] - If true, doesn't set loading flag (for background refreshes)
+  Future<void> fetchAttendance({bool silent = false}) async {
+    if (!silent) {
+      _isLoadingAttendance = true;
+      notifyListeners();
     }
-    
+
     try {
-      // Parse start time (format: "09:00" or "09:00:00")
-      final startTimeParts = startTime.split(':');
-      if (startTimeParts.length < 2) {
-        return true;
+      final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        if (!silent) {
+          _isLoadingAttendance = false;
+          notifyListeners();
+        }
+        return;
       }
-      
-      final startHour = int.parse(startTimeParts[0]);
-      final startMinute = int.parse(startTimeParts[1]);
-      
-      // Create DateTime for today's start time
-      final startDateTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        startHour,
-        startMinute,
+
+      debugPrint('[Attendance API] GET ${ApiEndpoints.getMyAttendance}');
+      final response = await ApiClient.get(
+        ApiEndpoints.getMyAttendance,
+        token: token,
       );
-      
-      // Check if current time is between start time (inclusive) and 1 hour after start time (exclusive)
-      // Show button when: start_time <= current_time < start_time + 1 hour
-      final timeDifference = now.difference(startDateTime);
-      return timeDifference.inMinutes >= 0 && timeDifference.inMinutes < 60;
+
+      if (!silent) {
+        _isLoadingAttendance = false;
+      }
+
+      if (response.isSuccess) {
+        final attendanceList = response.getList<Map<String, dynamic>>('attendance');
+        if (attendanceList != null) {
+          _attendanceRecords = attendanceList
+              .map((json) => AttendanceModel.fromJson(json))
+              .toList();
+          debugPrint('[Attendance API] Loaded ${_attendanceRecords.length} attendance records');
+        } else {
+          _attendanceRecords = [];
+        }
+      } else {
+        debugPrint('[Attendance API] Failed: ${response.message}');
+        _attendanceRecords = [];
+      }
+      notifyListeners();
     } catch (e) {
-      debugPrint('Failed to parse start time: $e');
-      return true;
+      if (!silent) {
+        _isLoadingAttendance = false;
+      }
+      debugPrint('[Attendance API] Exception: $e');
+      notifyListeners();
     }
   }
 
+  /// Get today's attendance record for a specific job
+  AttendanceModel? getTodayAttendanceForJob(String jobId) {
+    final jobIdInt = int.tryParse(jobId);
+    if (jobIdInt == null) return null;
+
+    try {
+      return _attendanceRecords.firstWhere(
+        (attendance) =>
+            attendance.jobId == jobIdInt && attendance.isPunchInToday,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Check if job is completed today (has punch out for today)
+  bool isJobCompletedToday(String jobId) {
+    final attendance = getTodayAttendanceForJob(jobId);
+    return attendance != null && attendance.isCompletedToday;
+  }
+
+  /// Check if Punch Out button should be shown
+  bool shouldShowCheckOutButton(ApplicationData? application) {
+    if (application == null) {
+      return false;
+    }
+    
+    final now = DateTime.now();
+    
+    // 1. Verify Date
+    if (!_isJobScheduledForDate(application.job, now)) {
+      return false;
+    }
+    
+    // 2. Check attendance: punch in today but no punch out yet
+    final attendance = getTodayAttendanceForJob(application.job.id);
+    if (attendance != null && attendance.isActiveToday) {
+      return true;
+    }
+    
+    // 3. Fallback: Verify Status (Must be 'In Progress')
+    final status = application.status.toLowerCase();
+    return status == 'in progress';
+  }
+
   /// Get assigned jobs (jobs where user's application status is "Selected")
-  /// Excludes jobs that are shown in Active Job (today's Selected jobs)
+  /// Excludes jobs that are currently Active (shown in the active tab)
   List<ApplicationData> get assignedJobs {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
     
     return _myApplications.where((app) {
       // Check if application status is "Selected"
@@ -231,359 +267,152 @@ class JobViewModel extends ChangeNotifier {
       }
       
       // Don't include if today is one of this job's scheduled days (already in Active Job)
-      return !app.job.isDateScheduledFor(today);
+      return !_isJobScheduledForDate(app.job, now);
     }).toList();
   }
 
-  /// Get pending jobs (awaiting accept/reject response) - legacy method, kept for compatibility
-  /// Note: JobStatus.pending was removed as API only returns 'open', 'closed', or 'filled'
   List<JobModel> get pendingJobs {
-    return []; // No pending job status from API
+    return [];
   }
 
-  /// Get all jobs
   List<JobModel> get allJobs => _jobs;
 
   /// Check in (punch in) for active job
-  Future<bool> checkIn() async {
-    if (_isCheckedIn) {
-      debugPrint('[Check-in API] Already checked in, skipping API call');
-      return false; // Already checked in
-    }
+/// Check in (punch in) for active job
+  Future<bool> checkIn({String? jobId}) async {
+    final activeJobApp = jobId != null ? getApplicationDataForJob(jobId) : activeJob;
 
-    // Get the active job
-    final activeJobApp = activeJob;
     if (activeJobApp == null) {
-      debugPrint('[Check-in API] No active job found');
       _errorMessage = 'No active job found';
       notifyListeners();
       return false;
     }
 
-    // Set loading state
     _isCheckingIn = true;
-    _errorMessage = null;
     notifyListeners();
 
     try {
-      // Get authentication token
       final token = await AuthService.getToken();
-      
-      if (token == null || token.isEmpty) {
-        debugPrint('[Check-in API] Authentication token is missing');
-        _errorMessage = 'Authentication required. Please login again.';
-        notifyListeners();
-        return false;
-      }
-
       final endpoint = ApiEndpoints.punchIn(activeJobApp.job.id);
       
-      // Get current time information for debugging
-      final now = DateTime.now();
-      final nowUtc = DateTime.now().toUtc();
-      final jobStartTime = activeJobApp.job.durationStartTime;
+      // Get device location
+      Position position = await Geolocator.getCurrentPosition();
       
-      debugPrint('[Check-in API] Starting check-in request');
-      debugPrint('[Check-in API] Endpoint: $endpoint');
-      debugPrint('[Check-in API] Job ID: ${activeJobApp.job.id}');
-      debugPrint('[Check-in API] Job Title: ${activeJobApp.job.jobTitle}');
-      debugPrint('[Check-in API] Current Application Status: ${activeJobApp.status}');
-      debugPrint('[Check-in API] Job Date: ${activeJobApp.job.jobDate}');
-      debugPrint('[Check-in API] Job Start Time (from API): $jobStartTime');
-      debugPrint('[Check-in API] Device Current Time (Local): $now');
-      debugPrint('[Check-in API] Device Current Time (UTC): $nowUtc');
-      debugPrint('[Check-in API] Device Timezone Offset: ${now.timeZoneOffset}');
-      debugPrint('[Check-in API] Device Timezone Name: ${now.timeZoneName}');
-      
-      // Parse and log the start time comparison
-      if (jobStartTime != null && jobStartTime.isNotEmpty) {
-        try {
-          final startTimeParts = jobStartTime.split(':');
-          if (startTimeParts.length >= 2) {
-            final startHour = int.parse(startTimeParts[0]);
-            final startMinute = int.parse(startTimeParts[1]);
-            final startDateTime = DateTime(
-              now.year,
-              now.month,
-              now.day,
-              startHour,
-              startMinute,
-            );
-            final startDateTimeUtc = startDateTime.toUtc();
-            final timeDifference = now.difference(startDateTime);
-            final timeDifferenceMinutes = timeDifference.inMinutes;
-            
-            debugPrint('[Check-in API] Parsed Start Time (Local): $startDateTime');
-            debugPrint('[Check-in API] Parsed Start Time (UTC): $startDateTimeUtc');
-            debugPrint('[Check-in API] Time Difference (minutes): $timeDifferenceMinutes');
-            debugPrint('[Check-in API] Time Difference (seconds): ${timeDifference.inSeconds}');
-            debugPrint('[Check-in API] Is current time >= start time? ${now.isAfter(startDateTime) || now.isAtSameMomentAs(startDateTime)}');
-      debugPrint('[Check-in API] Current hour: ${now.hour}, minute: ${now.minute}, second: ${now.second}');
-      debugPrint('[Check-in API] Start hour: ${startDateTime.hour}, minute: ${startDateTime.minute}');
-      debugPrint('[Check-in API] ⚠️ TIMEZONE ISSUE DETECTED ⚠️');
-      debugPrint('[Check-in API] Backend likely sees: Server time (probably UTC: ${nowUtc.hour}:${nowUtc.minute.toString().padLeft(2, '0')}) vs Job start time (11:15 in backend timezone)');
-      debugPrint('[Check-in API] Backend comparison: ${nowUtc.hour}:${nowUtc.minute.toString().padLeft(2, '0')} >= 11:15? ${nowUtc.hour > 11 || (nowUtc.hour == 11 && nowUtc.minute >= 15)}');
-      }
-        } catch (e) {
-          debugPrint('[Check-in API] Error parsing start time: $e');
-        }
-      }
+      // Request body as requested: { "lat": ..., "lng": ... }
+      final body = {
+        "lat": position.latitude,
+        "lng": position.longitude
+      };
 
-      final location = await _resolveDeviceLocation();
-      final body = <String, dynamic>{};
-      if (location != null) {
-        body['punch_in_latitude'] = location.latitude.toString();
-        body['punch_in_longitude'] = location.longitude.toString();
-      } else {
-        debugPrint('[Check-in API] Unable to retrieve location for punch in');
-      }
-
-      // Call punch-in API endpoint
-      // NOTE: Backend uses server time for validation, not client time
-      // This may cause timezone mismatch issues
       final response = await ApiClient.post(
         endpoint,
+        body: body,
         token: token,
-        body: body.isEmpty ? null : body,
       );
-
-      debugPrint('[Check-in API] Response received');
-      debugPrint('[Check-in API] Success: ${response.isSuccess}');
-      debugPrint('[Check-in API] Status Code: ${response.statusCode}');
-      debugPrint('[Check-in API] Message: ${response.message}');
-      debugPrint('[Check-in API] Response Data: ${response.data}');
 
       if (response.isSuccess) {
         _isCheckedIn = true;
-        _errorMessage = null;
-        
-        debugPrint('[Check-in API] Check-in successful');
-        debugPrint('[Check-in API] Updating application status from "${activeJobApp.status}" to "In Progress"');
-        
-        // Update application status to "In Progress" if it was "Selected"
-        if (activeJobApp.status.toLowerCase() == 'selected') {
-          _applicationStatuses[activeJobApp.job.id] = 'In Progress';
-          // Update the application in the list
-          final index = _myApplications.indexWhere((app) => app.job.id == activeJobApp.job.id);
-          if (index != -1) {
-            _myApplications[index] = ApplicationData(
-              job: activeJobApp.job,
-              status: 'In Progress',
-              applicationId: activeJobApp.applicationId,
-            );
-          }
-        }
-        
-        _isCheckingIn = false;
-        notifyListeners();
+        // Refresh data in background without showing loading indicator
+        _refreshMyJobsInBackground().then((_) => fetchAttendance(silent: true));
         return true;
       } else {
-        debugPrint('[Check-in API] Check-in failed: ${response.message}');
-        _errorMessage = response.message.isNotEmpty
-            ? response.message
-            : 'Failed to check in. Please try again.';
-        _isCheckingIn = false;
-        notifyListeners();
+        _errorMessage = response.message;
         return false;
       }
     } catch (e) {
-      debugPrint('[Check-in API] Exception occurred: $e');
-      debugPrint('[Check-in API] Stack trace: ${StackTrace.current}');
-      _errorMessage = 'Failed to check in. Please try again.';
+      _errorMessage = 'Location access is required to punch in.';
+      return false;
+    } finally {
       _isCheckingIn = false;
       notifyListeners();
-      return false;
     }
   }
 
-  /// Reset check-in status (for testing or logout)
-  void resetCheckIn() {
-    _isCheckedIn = false;
-    notifyListeners();
-  }
-
   /// Check out (punch out) for active job
-  Future<bool> checkOut() async {
-    // Get the active job
-    final activeJobApp = activeJob;
+  Future<bool> checkOut({String? jobId}) async {
+    final activeJobApp = jobId != null ? getApplicationDataForJob(jobId) : activeJob;
+
     if (activeJobApp == null) {
-      debugPrint('[Check-out API] No active job found');
       _errorMessage = 'No active job found';
       notifyListeners();
       return false;
     }
 
-    // Check if status is "In Progress"
-    if (activeJobApp.status.toLowerCase() != 'in progress') {
-      debugPrint('[Check-out API] Job is not in progress. Current status: ${activeJobApp.status}');
-      _errorMessage = 'You must check in before checking out';
-      notifyListeners();
-      return false;
-    }
-
-    // Set loading state
     _isCheckingOut = true;
-    _errorMessage = null;
     notifyListeners();
 
     try {
-      // Get authentication token
       final token = await AuthService.getToken();
-      
-      if (token == null || token.isEmpty) {
-        debugPrint('[Check-out API] Authentication token is missing');
-        _errorMessage = 'Authentication required. Please login again.';
-        notifyListeners();
-        return false;
-      }
-
       final endpoint = ApiEndpoints.punchOut(activeJobApp.job.id);
       
-      // Get current time information for debugging
-      final now = DateTime.now();
-      final nowUtc = DateTime.now().toUtc();
-      final jobEndTime = activeJobApp.job.durationEndTime;
+      Position position = await Geolocator.getCurrentPosition();
       
-      debugPrint('[Check-out API] Starting check-out request');
-      debugPrint('[Check-out API] Endpoint: $endpoint');
-      debugPrint('[Check-out API] Job ID: ${activeJobApp.job.id}');
-      debugPrint('[Check-out API] Job Title: ${activeJobApp.job.jobTitle}');
-      debugPrint('[Check-out API] Current Application Status: ${activeJobApp.status}');
-      debugPrint('[Check-out API] Job Date: ${activeJobApp.job.jobDate}');
-      debugPrint('[Check-out API] Job End Time (from API): $jobEndTime');
-      debugPrint('[Check-out API] Device Current Time (Local): $now');
-      debugPrint('[Check-out API] Device Current Time (UTC): $nowUtc');
-      debugPrint('[Check-out API] Device Timezone Offset: ${now.timeZoneOffset}');
-      debugPrint('[Check-out API] Device Timezone Name: ${now.timeZoneName}');
+      final body = {
+        "lat": position.latitude,
+        "lng": position.longitude
+      };
 
-      // Request device location for punch out
-      final location = await _resolveDeviceLocation();
-      final body = <String, dynamic>{};
-      if (location != null) {
-        body['punch_out_latitude'] = location.latitude.toString();
-        body['punch_out_longitude'] = location.longitude.toString();
-      } else {
-        debugPrint('[Check-out API] Unable to retrieve location for punch out');
-      }
-
-      // Call punch-out API endpoint
       final response = await ApiClient.post(
         endpoint,
+        body: body,
         token: token,
-        body: body.isEmpty ? null : body,
       );
-
-      debugPrint('[Check-out API] Response received');
-      debugPrint('[Check-out API] Success: ${response.isSuccess}');
-      debugPrint('[Check-out API] Status Code: ${response.statusCode}');
-      debugPrint('[Check-out API] Message: ${response.message}');
-      debugPrint('[Check-out API] Response Data: ${response.data}');
 
       if (response.isSuccess) {
         _isCheckedIn = false;
-        _errorMessage = null;
-        
-        debugPrint('[Check-out API] Check-out successful');
-        debugPrint('[Check-out API] Updating application status from "${activeJobApp.status}" to "Completed"');
-        
-        // Update application status to "Completed"
-        _applicationStatuses[activeJobApp.job.id] = 'Completed';
-        // Update the application in the list
-        final index = _myApplications.indexWhere((app) => app.job.id == activeJobApp.job.id);
-        if (index != -1) {
-          _myApplications[index] = ApplicationData(
-            job: activeJobApp.job,
-            status: 'Completed',
-            applicationId: activeJobApp.applicationId,
-          );
-        }
-        
-        _isCheckingOut = false;
-        notifyListeners();
+        // Refresh data in background without showing loading indicator
+        _refreshMyJobsInBackground().then((_) => fetchAttendance(silent: true));
         return true;
       } else {
-        debugPrint('[Check-out API] Check-out failed: ${response.message}');
-        _errorMessage = response.message.isNotEmpty
-            ? response.message
-            : 'Failed to check out. Please try again.';
-        _isCheckingOut = false;
-        notifyListeners();
+        _errorMessage = response.message;
         return false;
       }
     } catch (e) {
-      debugPrint('[Check-out API] Exception occurred: $e');
-      debugPrint('[Check-out API] Stack trace: ${StackTrace.current}');
-      _errorMessage = 'Failed to check out. Please try again.';
+      _errorMessage = 'Location access is required to punch out.';
+      return false;
+    } finally {
       _isCheckingOut = false;
       notifyListeners();
-      return false;
     }
-  }
-
-  /// Check if check-out button should be shown for a job
-  /// Returns true if:
-  /// - Job date is today
-  /// - User's application status is "In Progress"
-  /// Note: Check-out button is shown immediately after check-in, regardless of end time
-  bool shouldShowCheckOutButton(ApplicationData? application) {
-    if (application == null) {
-      return false;
-    }
-    
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    
-    // Check if today is one of the job's scheduled days (job_day_dates or jobDate)
-    if (!application.job.isDateScheduledFor(today)) {
-      return false;
-    }
-    
-    // Check application status (should be "In Progress")
-    final status = application.status.toLowerCase();
-    return status == 'in progress';
   }
 
   Future<Position?> _resolveDeviceLocation() async {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('[Location] Location services are disabled');
-        return null;
-      }
+      if (!serviceEnabled) return null;
 
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.denied) {
-        debugPrint('[Location] Permission still denied after request');
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
         return null;
       }
 
-      if (permission == LocationPermission.deniedForever) {
-        debugPrint('[Location] Permission denied forever - please open app settings');
-        return null;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-        ),
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
       );
-      debugPrint('[Location] Obtained coordinates: ${position.latitude}, ${position.longitude}');
-      return position;
     } catch (e) {
-      debugPrint('[Location] Failed to get device location: $e');
       return null;
     }
   }
 
-  /// Load user's jobs from /api/me/jobs and store in my applications list.
-  /// 
-  /// [forceRefresh] - If true, always fetch from API. If false and data exists, show cached data and refresh in background.
+  void _updateLocalApplicationStatus(String jobId, String newStatus) {
+    _applicationStatuses[jobId] = newStatus;
+    final index = _myApplications.indexWhere((app) => app.job.id == jobId);
+    if (index != -1) {
+      _myApplications[index] = ApplicationData(
+        job: _myApplications[index].job,
+        status: newStatus,
+        applicationId: _myApplications[index].applicationId,
+      );
+    }
+  }
+
+  /// Load user's jobs from /api/me/jobs
   Future<void> loadMyJobs({bool forceRefresh = false}) async {
-    // Try to load from disk cache first (if not forcing refresh)
+    // Try disk cache first
     if (!forceRefresh && _myApplications.isEmpty) {
       final cachedApplications = await CacheService.loadApplications();
       if (cachedApplications != null && cachedApplications.isNotEmpty) {
@@ -592,11 +421,10 @@ class JobViewModel extends ChangeNotifier {
           _myApplications.clear();
           for (var application in cachedApplications) {
             final jobData = application['job'] as Map<String, dynamic>?;
-            final jobId = jobData?['id']?.toString() ?? 
-                         application['job_id']?.toString();
-            final status = application['status']?.toString() ?? 
-                          application['application_status']?.toString();
+            final jobId = jobData?['id']?.toString() ?? application['job_id']?.toString();
+            final status = application['status']?.toString() ?? application['application_status']?.toString();
             final applicationId = application['id']?.toString() ?? '';
+            
             if (jobData != null && jobId != null && status != null) {
               try {
                 final job = JobModel.fromJson(jobData);
@@ -613,9 +441,7 @@ class JobViewModel extends ChangeNotifier {
           }
           _hasLoadedApplications = true;
           notifyListeners();
-        } catch (e) {
-          debugPrint('Failed to parse cached applications: $e');
-        }
+        } catch (_) {}
       }
     }
 
@@ -630,43 +456,36 @@ class JobViewModel extends ChangeNotifier {
     try {
       final token = await AuthService.getToken();
       if (token == null || token.isEmpty) {
-        debugPrint('[api/me/jobs] Authentication token is missing');
         _isLoadingApplications = false;
         notifyListeners();
         return;
       }
 
-      final queryParams = {'per_page': '100'};
-      debugPrint('[api/me/jobs] GET ${ApiEndpoints.getMyJobs}');
-      debugPrint('[api/me/jobs] Query: $queryParams, forceRefresh: $forceRefresh');
-
       final response = await ApiClient.get(
         ApiEndpoints.getMyJobs,
-        queryParameters: queryParams,
+        queryParameters: {'per_page': '100'},
         token: token,
       );
 
       _isLoadingApplications = false;
       _hasLoadedApplications = true;
 
-      debugPrint('[api/me/jobs] Response success: ${response.isSuccess}, statusCode: ${response.statusCode}');
-      debugPrint('[api/me/jobs] Message: ${response.message}');
-
       if (response.isSuccess) {
         List<Map<String, dynamic>>? jobsList = response.getList<Map<String, dynamic>>('jobs');
         if (jobsList != null && jobsList.isNotEmpty) {
-          debugPrint('[api/me/jobs] Parsing ${jobsList.length} jobs');
           _applicationStatuses.clear();
           _myApplications.clear();
           final applicationsForCache = <Map<String, dynamic>>[];
 
           for (var jobOrApplication in jobsList) {
-            // /api/me/jobs returns flat job objects (no nested 'job'); support both shapes
             final jobData = jobOrApplication['job'] as Map<String, dynamic>? ?? jobOrApplication;
             final jobId = jobData['id']?.toString() ?? jobOrApplication['job_id']?.toString();
-            // Use application_status for tab filtering; job 'status' (filled/open) is for JobModel only
-            final status = jobOrApplication['application_status']?.toString() ?? 'Applied';
             final applicationId = jobOrApplication['id']?.toString() ?? '';
+            
+            // IMPORTANT: If 'application_status' is missing from /api/me/jobs, 
+            // we default to 'Selected' because these are assigned jobs.
+            // Using 'Applied' (previous default) caused active jobs to be hidden.
+            final status = jobOrApplication['application_status']?.toString() ?? 'Selected';
 
             if (jobData.isNotEmpty && jobId != null) {
               try {
@@ -683,7 +502,7 @@ class JobViewModel extends ChangeNotifier {
                   'id': applicationId,
                 });
               } catch (e) {
-                debugPrint('[api/me/jobs] Failed to parse job: $e');
+                debugPrint('Failed to parse job: $e');
               }
             }
           }
@@ -691,32 +510,23 @@ class JobViewModel extends ChangeNotifier {
           if (applicationsForCache.isNotEmpty) {
             await CacheService.saveApplications(applicationsForCache);
           }
-          debugPrint('[api/me/jobs] Loaded ${_myApplications.length} jobs');
           notifyListeners();
         } else {
-          debugPrint('[api/me/jobs] No jobs in response');
-          _applicationStatuses.clear();
-          _myApplications.clear();
+          _myApplications = [];
           await CacheService.clearApplications();
           notifyListeners();
         }
-      } else {
-        debugPrint('[api/me/jobs] Request failed: ${response.message}');
       }
     } catch (e) {
       _isLoadingApplications = false;
-      debugPrint('[api/me/jobs] Exception: $e');
       notifyListeners();
     }
   }
 
-  /// Load user's applications to check application status.
-  /// Delegates to loadMyJobs (GET /api/me/jobs).
   Future<void> loadMyApplications({bool forceRefresh = false}) async {
     return loadMyJobs(forceRefresh: forceRefresh);
   }
 
-  /// Refresh my jobs in background without showing loading indicator (GET /api/me/jobs).
   Future<void> _refreshMyJobsInBackground() async {
     try {
       final token = await AuthService.getToken();
@@ -738,8 +548,9 @@ class JobViewModel extends ChangeNotifier {
           for (var jobOrApplication in jobsList) {
             final jobData = jobOrApplication['job'] as Map<String, dynamic>? ?? jobOrApplication;
             final jobId = jobData['id']?.toString() ?? jobOrApplication['job_id']?.toString();
-            final status = jobOrApplication['application_status']?.toString() ?? 'Applied';
             final applicationId = jobOrApplication['id']?.toString() ?? '';
+            // Default to 'Selected' if status is missing
+            final status = jobOrApplication['application_status']?.toString() ?? 'Selected';
 
             if (jobData.isNotEmpty && jobId != null) {
               try {
@@ -755,62 +566,17 @@ class JobViewModel extends ChangeNotifier {
                   'status': status,
                   'id': applicationId,
                 });
-              } catch (e) {
-                debugPrint('Background refresh parse error: $e');
-              }
+              } catch (_) {}
             }
           }
 
           if (applicationsForCache.isNotEmpty) {
             await CacheService.saveApplications(applicationsForCache);
-          } else {
-            await CacheService.clearApplications();
           }
           notifyListeners();
         }
       }
-    } catch (e) {
-      debugPrint('[api/me/jobs] Background refresh failed: $e');
-    }
+    } catch (_) {}
   }
 
-  /// Apply for a job
-  Future<bool> applyForJob(String jobId) async {
-    try {
-      // Get authentication token
-      final token = await AuthService.getToken();
-      
-      if (token == null || token.isEmpty) {
-        _errorMessage = 'Authentication required. Please login again.';
-        notifyListeners();
-        return false;
-      }
-
-      // Call apply for job API endpoint
-      final response = await ApiClient.post(
-        ApiEndpoints.applyForJob(jobId),
-        token: token,
-      );
-
-      if (response.isSuccess) {
-        // Mark job as applied
-        _applicationStatuses[jobId] = 'Applied';
-        _errorMessage = null;
-        notifyListeners();
-        return true;
-      } else {
-        // Set error message from API response
-        _errorMessage = response.message.isNotEmpty
-            ? response.message
-            : 'Failed to apply for job. Please try again.';
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _errorMessage = 'Failed to submit application. Please try again.';
-      notifyListeners();
-      return false;
-    }
-  }
 }
-

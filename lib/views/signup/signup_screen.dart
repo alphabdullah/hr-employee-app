@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../routes/app_router.dart';
 import '../../routes/route_names.dart';
 
 /// Main SignUp Screen - Redirects to Step 1

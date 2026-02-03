@@ -61,11 +61,12 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController = TabController(length: 2, vsync: this); // Active Job, Assigned Jobs
     _carouselController = PageController();
     
-    // Load jobs, applications, and notifications
+    // Load jobs, applications, attendance, and notifications
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final jobViewModel = context.read<JobViewModel>();
-      jobViewModel.loadJobs();
+      // jobViewModel.loadJobs();
       jobViewModel.loadMyApplications(); // Load user's applications (needed for Active/Assigned tabs)
+      jobViewModel.fetchAttendance(); // Load attendance records
       context.read<NotificationViewModel>().loadNotifications();
     });
 
@@ -320,36 +321,30 @@ class _HomeScreenState extends State<HomeScreen>
           return const Center(child: CircularProgressIndicator());
         }
 
-        final activeJobApplication = viewModel.activeJob;
+        final activeJobs = viewModel.activeJobs;
 
-        if (activeJobApplication == null) {
+        if (activeJobs.isEmpty) {
           return RefreshIndicator(
             onRefresh: () async {
-              await viewModel.loadJobs();
-              await viewModel.loadMyApplications();
+              await viewModel.loadMyApplications(forceRefresh: true);
+              await viewModel.fetchAttendance();
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.7,
-                child: _buildEmptyState('No active job for today'),
+                child: _buildEmptyState('No active jobs for today'),
               ),
             ),
           );
         }
 
-        // Check if check-in or check-out button should be shown
-        final status = activeJobApplication.status.toLowerCase();
-        final isInProgress = status == 'in progress';
-        final shouldShowCheckIn = !isInProgress && viewModel.shouldShowCheckInButton(activeJobApplication);
-        final shouldShowCheckOut = isInProgress && viewModel.shouldShowCheckOutButton(activeJobApplication);
-
         return RefreshIndicator(
           onRefresh: () async {
-            await viewModel.loadJobs();
-            await viewModel.loadMyApplications();
+            // await viewModel.loadJobs();
+            // await viewModel.loadMyApplications();
           },
-          child: SingleChildScrollView(
+          child: ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.only(
               left: ScreenUnitUtil.getSpacing(16),
@@ -357,18 +352,34 @@ class _HomeScreenState extends State<HomeScreen>
               top: ScreenUnitUtil.getSpacing(8),
               bottom: MediaQuery.of(context).padding.bottom + ScreenUnitUtil.getSpacing(8),
             ),
-            child: Column(
-              children: [
-                JobCard(
-                  job: activeJobApplication.job,
-                  applicationStatus: activeJobApplication.status,
-                  showCheckInButton: shouldShowCheckIn,
-                  showCheckOutButton: shouldShowCheckOut,
-                  viewModel: viewModel,
-                  applicationData: activeJobApplication,
-                ),
-              ],
-            ),
+            itemCount: activeJobs.length,
+            itemBuilder: (context, index) {
+              final activeJobApplication = activeJobs[index];
+              
+              // Check attendance for today
+              final isCompletedToday = viewModel.isJobCompletedToday(activeJobApplication.job.id);
+              
+              // Check if check-in or check-out button should be shown
+              final status = activeJobApplication.status.toLowerCase();
+              final isInProgress = status == 'in progress';
+              final shouldShowCheckIn = !isCompletedToday && !isInProgress && viewModel.shouldShowCheckInButton(activeJobApplication);
+              final shouldShowCheckOut = !isCompletedToday && viewModel.shouldShowCheckOutButton(activeJobApplication);
+              
+              // Determine status text to display
+              String displayStatus = activeJobApplication.status;
+              if (isCompletedToday) {
+                displayStatus = 'Completed';
+              }
+
+              return JobCard(
+                job: activeJobApplication.job,
+                applicationStatus: displayStatus,
+                showCheckInButton: shouldShowCheckIn,
+                showCheckOutButton: shouldShowCheckOut,
+                viewModel: viewModel,
+                applicationData: activeJobApplication,
+              );
+            },
           ),
         );
       },
@@ -387,8 +398,8 @@ class _HomeScreenState extends State<HomeScreen>
         if (assignedApplications.isEmpty) {
           return RefreshIndicator(
             onRefresh: () async {
-              await viewModel.loadJobs();
-              await viewModel.loadMyApplications();
+              await viewModel.loadMyApplications(forceRefresh: true);
+              await viewModel.fetchAttendance();
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -402,8 +413,8 @@ class _HomeScreenState extends State<HomeScreen>
 
         return RefreshIndicator(
           onRefresh: () async {
-            await viewModel.loadJobs();
-            await viewModel.loadMyApplications();
+            // await viewModel.loadJobs();
+            // await viewModel.loadMyApplications();
           },
           child: ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
