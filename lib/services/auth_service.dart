@@ -132,6 +132,28 @@ class AuthService {
     }
   }
 
+  /// Clear user status
+  static Future<bool> clearUserStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_userStatusKey);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Clear registration progress
+  static Future<bool> clearRegistrationProgress() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_registrationProgressKey);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Clear all authentication data
   static Future<bool> clearAll() async {
     try {

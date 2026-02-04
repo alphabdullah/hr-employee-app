@@ -87,32 +87,26 @@ class LoginViewModel extends ChangeNotifier {
         final registrationProgressData = response.getField<Map<String, dynamic>>('registration_progress');
         
         if (token != null && token.isNotEmpty) {
-          final userStatus = userData?['status']?.toString().toLowerCase();
+          final userStatus = userData?['status']?.toString().toLowerCase().trim();
 
-          // SPECIAL CASE: If status is 'pending', DO NOT save anything to SharedPreferences
-          // Just keep data in memory to allow navigation to specific screens
-          if (userStatus == 'pending') {
-            _userData = userData;
-            
-            // Parse registration progress locally
-            if (registrationProgressData != null) {
-              try {
-                _registrationProgress = RegistrationProgressModel.fromJson(registrationProgressData);
-              } catch (e) {
-                _registrationProgress = RegistrationProgressModel.empty();
-              }
-            } else {
-              _registrationProgress = RegistrationProgressModel.empty();
-            }
-            
-            notifyListeners();
-            return true;
-          }
-
-          // Normal flow: Save token
+          // Save token ALWAYS - needed for API calls even when status is pending
           final tokenSaved = await AuthService.saveToken(token);
           
-          // Save user data
+          if (!tokenSaved) {
+            _errorMessage = 'Failed to save authentication data. Please try again.';
+            notifyListeners();
+            return false;
+          }
+          
+          // Save employee ID ALWAYS - needed for API calls
+          if (userData != null) {
+            final employeeId = userData['id']?.toString();
+            if (employeeId != null) {
+              await AuthService.saveEmployeeId(employeeId);
+            }
+          }
+          
+          // Store user data and registration progress in memory
           _userData = userData;
           
           // Parse registration progress
@@ -126,18 +120,22 @@ class LoginViewModel extends ChangeNotifier {
           } else {
             _registrationProgress = RegistrationProgressModel.empty();
           }
-          
-          // Save employee ID if available
-          if (userData != null) {
-            final employeeId = userData['id']?.toString();
-            if (employeeId != null) {
-              await AuthService.saveEmployeeId(employeeId);
-            }
+
+          // SPECIAL CASE: If status is 'pending', DO NOT save status/progress to SharedPreferences
+          // But token and employee ID are already saved above for API calls
+          if (userStatus == 'pending') {
+            // Clear any existing saved status/progress (but keep token and employee ID)
+            await AuthService.clearUserStatus();
+            await AuthService.clearRegistrationProgress();
             
-            // Save user status
-            if (userStatus != null) {
-              await AuthService.saveUserStatus(userStatus);
-            }
+            debugPrint('[LoginViewModel] Status is pending - token and employee ID saved, but status/progress not persisted');
+            notifyListeners();
+            return true;
+          }
+
+          // Normal flow: Save user status and registration progress to SharedPreferences
+          if (userData != null && userStatus != null) {
+            await AuthService.saveUserStatus(userStatus);
           }
           
           // Save registration progress
@@ -145,14 +143,8 @@ class LoginViewModel extends ChangeNotifier {
             await AuthService.saveRegistrationProgress(_registrationProgress!);
           }
           
-          if (tokenSaved) {
-            notifyListeners();
-            return true;
-          } else {
-            _errorMessage = 'Failed to save authentication data. Please try again.';
-            notifyListeners();
-            return false;
-          }
+          notifyListeners();
+          return true;
         } else {
           _errorMessage = 'Invalid response from server. Please try again.';
           notifyListeners();

@@ -225,6 +225,23 @@ class JobViewModel extends ChangeNotifier {
     }
   }
 
+  /// Get all attendance records for a specific job
+  List<AttendanceModel> getAllAttendanceForJob(String jobId) {
+    final jobIdInt = int.tryParse(jobId);
+    if (jobIdInt == null) return [];
+
+    return _attendanceRecords
+        .where((attendance) => attendance.jobId == jobIdInt)
+        .toList()
+      ..sort((a, b) {
+        // Sort by punch in date (most recent first)
+        if (a.punchInAt == null && b.punchInAt == null) return 0;
+        if (a.punchInAt == null) return 1;
+        if (b.punchInAt == null) return -1;
+        return b.punchInAt!.compareTo(a.punchInAt!);
+      });
+  }
+
   /// Check if job is completed today (has punch out for today)
   bool isJobCompletedToday(String jobId) {
     final attendance = getTodayAttendanceForJob(jobId);

@@ -193,6 +193,7 @@ class MessageModel {
   final DateTime timestamp;
   final bool isSentByMe;
   final MessageType type;
+  final bool isAdmin; // Track if sender is admin
 
   MessageModel({
     required this.id,
@@ -204,6 +205,7 @@ class MessageModel {
     required this.timestamp,
     required this.isSentByMe,
     this.type = MessageType.text,
+    this.isAdmin = false,
   });
 
   factory MessageModel.fromJson(
@@ -246,6 +248,46 @@ class MessageModel {
       }
     }
 
+    // Check if sender is admin (check multiple possible field names and nested structures)
+    String? userRole;
+    
+    // Check direct fields first
+    userRole = json['user_role']?.toString().toLowerCase() ?? 
+               json['role']?.toString().toLowerCase() ?? 
+               json['sender_role']?.toString().toLowerCase() ??
+               json['user_role_id']?.toString().toLowerCase();
+    
+    // Check nested user object if exists
+    if (userRole == null || userRole.isEmpty) {
+      final userData = json['user'] as Map<String, dynamic>?;
+      if (userData != null) {
+        userRole = userData['role']?.toString().toLowerCase() ?? 
+                   userData['user_role']?.toString().toLowerCase() ??
+                   userData['role_id']?.toString().toLowerCase();
+      }
+    }
+    
+    // Also check if there's an employee object
+    if (userRole == null || userRole.isEmpty) {
+      final employeeData = json['employee'] as Map<String, dynamic>?;
+      if (employeeData != null) {
+        userRole = employeeData['role']?.toString().toLowerCase() ?? 
+                   employeeData['user_role']?.toString().toLowerCase();
+      }
+    }
+    
+    // Check if role contains "admin" or equals "admin"/"administrator"
+    final isAdmin = (userRole != null && (
+      userRole == 'admin' || 
+      userRole == 'administrator' || 
+      userRole.contains('admin')
+    ));
+    
+    // Debug logging only when admin is detected
+    if (isAdmin) {
+      debugPrint('[MessageModel] ✅ Admin detected - Role: $userRole, Sender: ${json['user_name']}');
+    }
+
     return MessageModel(
       id: json['id']?.toString() ?? '',
       chatId: '', // group endpoint doesn't return chatId → leave empty or pass from outside if needed
@@ -256,6 +298,7 @@ class MessageModel {
       timestamp: _parseTimestamp(json),
       isSentByMe: isSentByMe,
       type: MessageType.text, // for now — can extend later
+      isAdmin: isAdmin,
     );
   }
 
@@ -303,6 +346,7 @@ class MessageModel {
     DateTime? timestamp,
     bool? isSentByMe,
     MessageType? type,
+    bool? isAdmin,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -314,6 +358,7 @@ class MessageModel {
       timestamp: timestamp ?? this.timestamp,
       isSentByMe: isSentByMe ?? this.isSentByMe,
       type: type ?? this.type,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 }

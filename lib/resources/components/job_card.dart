@@ -174,39 +174,41 @@ class JobCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            // Required Skills Count Chip (for Explore screen)
-                            if (showSkillsCount && job.requiredSkills != null && job.requiredSkills!.isNotEmpty)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: ScreenUnitUtil.getSpacing(8),
-                                  vertical: ScreenUnitUtil.getSpacing(4),
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(
-                                    ScreenUnitUtil.getSpacing(4),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.star_outline,
-                                      size: ScreenUnitUtil.getFontSize(12),
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                    SizedBox(width: ScreenUnitUtil.getSpacing(4)),
-                                    Text(
-                                      '${job.requiredSkills!.length} skill${job.requiredSkills!.length > 1 ? 's' : ''}',
-                                      style: TextStyle(
-                                        fontSize: ScreenUnitUtil.getFontSize(12),
-                                        fontWeight: FontWeight.w500,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            // // Required Skills Count Chip (for Explore screen)
+                            // if (showSkillsCount && job.requiredSkills != null && job.requiredSkills!.isNotEmpty)
+                            //   Container(
+                            //     padding: EdgeInsets.symmetric(
+                            //       horizontal: ScreenUnitUtil.getSpacing(8),
+                            //       vertical: ScreenUnitUtil.getSpacing(4),
+                            //     ),
+                            //     decoration: BoxDecoration(
+                            //       color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            //       borderRadius: BorderRadius.circular(
+                            //         ScreenUnitUtil.getSpacing(4),
+                            //       ),
+                            //     ),
+                            //     child: Row(
+                            //       mainAxisSize: MainAxisSize.min,
+                            //       children: [
+                            //         Icon(
+                            //           Icons.star_outline,
+                            //           size: ScreenUnitUtil.getFontSize(12),
+                            //           color: Theme.of(context).colorScheme.primary,
+                            //         ),
+                            //         SizedBox(width: ScreenUnitUtil.getSpacing(4)),
+                            //         Text(
+                            //           '${job.requiredSkills!.length} skill${job.requiredSkills!.length > 1 ? 's' : ''}',
+                            //           style: TextStyle(
+                            //             fontSize: ScreenUnitUtil.getFontSize(12),
+                            //             fontWeight: FontWeight.w500,
+                            //             color: Theme.of(context).colorScheme.primary,
+                            //           ),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+
+
                           ],
                         ),
                       ],
@@ -215,7 +217,7 @@ class JobCard extends StatelessWidget {
                 ],
               ),
               
-              SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+              // SizedBox(height: ScreenUnitUtil.getSpacing(12)),
               
               // Job Description
               Text(
@@ -240,30 +242,30 @@ class JobCard extends StatelessWidget {
               //   ),
               // ],
 
-              if (job.perHourPay != null && job.workMode != null) ...[
-  SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-  Text(
-    _buildPayText(job),
-    style: TextStyle(
-      fontSize: ScreenUnitUtil.getFontSize(14),
-      fontWeight: FontWeight.w600,
-      color: Theme.of(context).colorScheme.onSurface,
-    ),
-  ),
-],
+//               if (job.perHourPay != null && job.workMode != null) ...[
+//   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+//   Text(
+//     _buildPayText(job),
+//     style: TextStyle(
+//       fontSize: ScreenUnitUtil.getFontSize(14),
+//       fontWeight: FontWeight.w600,
+//       color: Theme.of(context).colorScheme.onSurface,
+//     ),
+//   ),
+// ],
 
               
-              SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+              // SizedBox(height: ScreenUnitUtil.getSpacing(12)),
               
               // Job Details Row
               Row(
                 children: [
-                  _buildJobDetailItem(
-                    context,
-                    Icons.people_outline,
-                    _buildWorkersText(job),
-                  ),
-                  SizedBox(width: ScreenUnitUtil.getSpacing(16)),
+                  // _buildJobDetailItem(
+                  //   context,
+                  //   Icons.people_outline,
+                  //   _buildWorkersText(job),
+                  // ),
+                  // SizedBox(width: ScreenUnitUtil.getSpacing(16)),
                   _buildJobDetailItem(
                     context,
                     Icons.location_on_outlined,
@@ -274,19 +276,19 @@ class JobCard extends StatelessWidget {
               
               SizedBox(height: ScreenUnitUtil.getSpacing(8)),
               
-              // Client name (when available from /api/me/jobs client object)
-              if (job.createdBy != null && job.createdBy!['name'] != null && (job.createdBy!['name'] as String).isNotEmpty) ...[
-                Row(
-                  children: [
-                    _buildJobDetailItem(
-                      context,
-                      Icons.business_outlined,
-                      'Client: ${job.createdBy!['name']}',
-                    ),
-                  ],
-                ),
-                SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-              ],
+              // // Client name (when available from /api/me/jobs client object)
+              // if (job.createdBy != null && job.createdBy!['name'] != null && (job.createdBy!['name'] as String).isNotEmpty) ...[
+              //   Row(
+              //     children: [
+              //       _buildJobDetailItem(
+              //         context,
+              //         Icons.business_outlined,
+              //         'Client: ${job.createdBy!['name']}',
+              //       ),
+              //     ],
+              //   ),
+              //   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+              // ],
               
               // Date range (from_date - end_date) or single date
               Row(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/job_model.dart';
+import '../models/attendance_model.dart';
 import '../viewmodels/job_viewmodel.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
@@ -225,58 +226,58 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     SizedBox(height: ScreenUnitUtil.getSpacing(24)),
                   ],
 
-                  // Client Section (from /api/me/jobs client object)
-                  if (_hasClientInfo(widget.job)) ...[
-                    _buildSectionTitle('Client'),
-                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                    _buildClientSection(context, widget.job),
-                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-                  ],
+                  // // Client Section (from /api/me/jobs client object)
+                  // if (_hasClientInfo(widget.job)) ...[
+                  //   _buildSectionTitle('Client'),
+                  //   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  //   _buildClientSection(context, widget.job),
+                  //   SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  // ],
 
-                  // Required Skills Section
-                  if (widget.job.requiredSkills != null && widget.job.requiredSkills!.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionTitle('Required Skills'),
-                        SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                        Wrap(
-                          spacing: ScreenUnitUtil.getSpacing(8),
-                          runSpacing: ScreenUnitUtil.getSpacing(8),
-                          children: widget.job.requiredSkills!.map((skill) {
-                            return Chip(
-                              label: Text(
-                                skill,
-                                style: TextStyle(
-                                  fontSize: ScreenUnitUtil.getFontSize(14),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              backgroundColor: AppColors.secondary.withOpacity(0.1),
-                              labelStyle: TextStyle(
-                                color: AppColors.secondary,
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: ScreenUnitUtil.getSpacing(12),
-                                vertical: ScreenUnitUtil.getSpacing(4),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-                      ],
-                    ),
+                  // // Required Skills Section
+                  // if (widget.job.requiredSkills != null && widget.job.requiredSkills!.isNotEmpty)
+                  //   Column(
+                  //     crossAxisAlignment: CrossAxisAlignment.start,
+                  //     children: [
+                  //       _buildSectionTitle('Required Skills'),
+                  //       SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  //       Wrap(
+                  //         spacing: ScreenUnitUtil.getSpacing(8),
+                  //         runSpacing: ScreenUnitUtil.getSpacing(8),
+                  //         children: widget.job.requiredSkills!.map((skill) {
+                  //           return Chip(
+                  //             label: Text(
+                  //               skill,
+                  //               style: TextStyle(
+                  //                 fontSize: ScreenUnitUtil.getFontSize(14),
+                  //                 fontWeight: FontWeight.w500,
+                  //               ),
+                  //             ),
+                  //             backgroundColor: AppColors.secondary.withOpacity(0.1),
+                  //             labelStyle: TextStyle(
+                  //               color: AppColors.secondary,
+                  //             ),
+                  //             padding: EdgeInsets.symmetric(
+                  //               horizontal: ScreenUnitUtil.getSpacing(12),
+                  //               vertical: ScreenUnitUtil.getSpacing(4),
+                  //             ),
+                  //           );
+                  //         }).toList(),
+                  //       ),
+                  //       SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  //     ],
+                  //   ),
 
                   // Job Details Section
                   _buildSectionTitle('Job Details'),
                   SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                  _buildDetailRow(
-                    Icons.people_outline,
-                    'Workers Required',
-                    _buildWorkersText(widget.job),
-                  ),
-                  SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  // _buildDetailRow(
+                  //   Icons.people_outline,
+                  //   'Workers Required',
+                  //   _buildWorkersText(widget.job),
+                  // ),
+                  // SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                   _buildDetailRow(
                     Icons.location_on_outlined,
                     'Location',
@@ -379,6 +380,30 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         );
                       }
                       return const SizedBox.shrink();
+                    },
+                  ),
+
+                  SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+
+                  // Attendance History Section
+                  Consumer<JobViewModel>(
+                    builder: (context, viewModel, child) {
+                      final attendanceRecords = viewModel.getAllAttendanceForJob(widget.job.id);
+                      if (attendanceRecords.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle('Attendance History'),
+                          SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+                          ...attendanceRecords.map((attendance) => 
+                            _buildAttendanceCard(context, attendance)
+                          ),
+                          SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+                        ],
+                      );
                     },
                   ),
 
@@ -881,32 +906,28 @@ String _buildPayText(JobModel job) {
   }
 
   Future<void> _handleCheckIn(BuildContext context, JobViewModel viewModel, ApplicationData applicationData) async {
-    final success = await viewModel.checkIn();
+    final success = await viewModel.checkIn(jobId: applicationData.job.id);
+    if (!mounted) return;
     
-    if (success && mounted) {
-      // Reload applications to get updated status
-      await viewModel.loadMyApplications(forceRefresh: true);
-      if (mounted) {
-        ToastMessage.showSuccess('Successfully checked in!', context);
-      }
-    } else if (mounted) {
-      final errorMessage = viewModel.errorMessage ?? 'Failed to check in. Please try again.';
-      ToastMessage.showError(errorMessage, context);
+    if (success) {
+      // Refresh attendance to show updated punch in/out times
+      await viewModel.fetchAttendance();
+      ToastMessage.showSuccess('Successfully checked in!', context);
+    } else {
+      ToastMessage.showError(viewModel.errorMessage ?? 'Failed to check in. Please try again.', context);
     }
   }
 
   Future<void> _handleCheckOut(BuildContext context, JobViewModel viewModel, ApplicationData applicationData) async {
-    final success = await viewModel.checkOut();
+    final success = await viewModel.checkOut(jobId: applicationData.job.id);
+    if (!mounted) return;
     
-    if (success && mounted) {
-      // Reload applications to get updated status
-      await viewModel.loadMyApplications(forceRefresh: true);
-      if (mounted) {
-        ToastMessage.showSuccess('Successfully checked out!', context);
-      }
-    } else if (mounted) {
-      final errorMessage = viewModel.errorMessage ?? 'Failed to check out. Please try again.';
-      ToastMessage.showError(errorMessage, context);
+    if (success) {
+      // Refresh attendance to show updated punch in/out times
+      await viewModel.fetchAttendance();
+      ToastMessage.showSuccess('Successfully checked out!', context);
+    } else {
+      ToastMessage.showError(viewModel.errorMessage ?? 'Failed to check out. Please try again.', context);
     }
   }
 
@@ -949,6 +970,230 @@ String _buildPayText(JobModel job) {
     } else {
       // Prepend base URL for relative paths
       return 'https://hr.aibitsoft.cloud$imageUrl';
+    }
+  }
+
+  /// Build attendance card showing punch in/out times and hours worked
+  Widget _buildAttendanceCard(BuildContext context, AttendanceModel attendance) {
+    final punchInDate = attendance.punchInAt;
+    if (punchInDate == null) return const SizedBox.shrink();
+
+    // Format date
+    final dateStr = _formatAttendanceDate(punchInDate);
+    
+    // Format punch in time
+    final punchInTime = _formatTimeFromDateTime(punchInDate);
+    
+    // Format punch out time (if available)
+    String? punchOutTime;
+    Duration hoursWorked;
+    if (attendance.punchOutAt != null) {
+      punchOutTime = _formatTimeFromDateTime(attendance.punchOutAt!);
+      hoursWorked = attendance.punchOutAt!.difference(punchInDate);
+    } else {
+      // Still working - calculate hours from punch in to now
+      hoursWorked = DateTime.now().difference(punchInDate);
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: ScreenUnitUtil.getSpacing(12)),
+      padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(12)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Date header
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: ScreenUnitUtil.getFontSize(16),
+                color: AppColors.secondary,
+              ),
+              SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+              Text(
+                dateStr,
+                style: TextStyle(
+                  fontSize: ScreenUnitUtil.getFontSize(16),
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+          
+          // Punch In
+          Row(
+            children: [
+              Icon(
+                Icons.login,
+                size: ScreenUnitUtil.getFontSize(18),
+                color: AppColors.secondary,
+              ),
+              SizedBox(width: ScreenUnitUtil.getSpacing(12)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Punch In',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(4)),
+                    Text(
+                      punchInTime,
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(14),
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+          
+          // Punch Out
+          Row(
+            children: [
+              Icon(
+                Icons.logout,
+                size: ScreenUnitUtil.getFontSize(18),
+                color: attendance.punchOutAt != null 
+                    ? AppColors.secondary 
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
+              SizedBox(width: ScreenUnitUtil.getSpacing(12)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Punch Out',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(4)),
+                    Text(
+                      punchOutTime ?? 'Still working...',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(14),
+                        fontWeight: FontWeight.w500,
+                        color: attendance.punchOutAt != null
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        fontStyle: attendance.punchOutAt == null ? FontStyle.italic : FontStyle.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+          
+          Divider(height: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+          
+          SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+          
+          // Hours Worked
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: ScreenUnitUtil.getFontSize(18),
+                    color: AppColors.secondary,
+                  ),
+                  SizedBox(width: ScreenUnitUtil.getSpacing(12)),
+                  Text(
+                    'Hours Worked',
+                    style: TextStyle(
+                      fontSize: ScreenUnitUtil.getFontSize(14),
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                _formatHoursWorked(hoursWorked),
+                style: TextStyle(
+                  fontSize: ScreenUnitUtil.getFontSize(16),
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.secondary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Format attendance date
+  String _formatAttendanceDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    
+    if (dateOnly.isAtSameMomentAs(today)) {
+      return 'Today';
+    }
+    
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (dateOnly.isAtSameMomentAs(yesterday)) {
+      return 'Yesterday';
+    }
+    
+    // Format as "Day, Month DD, YYYY" (e.g., "Monday, February 01, 2026")
+    final weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}, ${date.year}';
+  }
+
+  /// Format time from DateTime (HH:MM AM/PM)
+  String _formatTimeFromDateTime(DateTime dateTime) {
+    final localTime = dateTime.toLocal();
+    final hour = localTime.hour;
+    final minute = localTime.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$displayHour:$minute $period';
+  }
+
+  /// Format hours worked duration
+  String _formatHoursWorked(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    
+    if (hours > 0 && minutes > 0) {
+      return '${hours}h ${minutes}m';
+    } else if (hours > 0) {
+      return '${hours}h';
+    } else {
+      return '${minutes}m';
     }
   }
 }

@@ -25,6 +25,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   // We'll create the viewmodel here
   late final ChatDetailViewModel _viewModel;
+  String? _lastMessageId;
 
   @override
   void initState() {
@@ -33,9 +34,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     // Create the viewmodel instance once
     _viewModel = ChatDetailViewModel(widget.groupId);
 
+    // Listen to viewmodel changes to detect new messages
+    _viewModel.addListener(_onMessagesChanged);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Start loading messages
       _viewModel.loadGroupMessages().then((_) {
+        final messages = _viewModel.messages;
+        if (messages.isNotEmpty) {
+          _lastMessageId = messages.last.id;
+        }
         _scrollToBottom();
         // Start polling for new messages
         _viewModel.startPolling();
@@ -45,19 +53,61 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   void dispose() {
+    _viewModel.removeListener(_onMessagesChanged);
     _scrollController.dispose();
     _viewModel.dispose(); // important: clean up the viewmodel (this will stop polling)
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  /// Called when messages change - checks if we should auto-scroll
+  void _onMessagesChanged() {
+    final messages = _viewModel.messages;
+    if (messages.isEmpty) return;
+    
+    final lastMessage = messages.last;
+    
+    // Check if a new message was added (different ID than last known)
+    if (_lastMessageId != null && lastMessage.id != _lastMessageId) {
+      // New message detected - check if user is at the bottom
+      // Wait for ListView to finish rendering, then check scroll position and scroll
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && _isAtBottom()) {
+          // User is at bottom - auto-scroll to show new message (jump immediately for better UX)
+          _scrollToBottom(smooth: false);
+        }
+      });
+    }
+    
+    // Update last known message ID
+    _lastMessageId = lastMessage.id;
+  }
+
+  /// Check if user is at the bottom of the scroll view (within 150px threshold)
+  bool _isAtBottom() {
+    if (!_scrollController.hasClients) return false;
+    
+    final position = _scrollController.position;
+    final maxScroll = position.maxScrollExtent;
+    final currentScroll = position.pixels;
+    
+    // Consider user at bottom if within 150px of the end (more lenient threshold)
+    return (maxScroll - currentScroll) <= 150;
+  }
+
+  void _scrollToBottom({bool smooth = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      if (_scrollController.hasClients && mounted) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (smooth) {
+          _scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        } else {
+          // Jump immediately for new messages
+          _scrollController.jumpTo(maxScroll);
+        }
       }
     });
   }
@@ -111,6 +161,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
   Widget _buildMessageBubble(BuildContext context, MessageModel message) {
     final isMe = message.isSentByMe;
+    // Check admin status - also check sender name pattern as fallback
+    final isAdmin = message.isAdmin || 
+                    message.senderName.toLowerCase().contains('admin') ||
+                    message.senderName.toLowerCase().contains('administrator');
+
+    // Admin colors - use more prominent accent/gold color for admin messages
+    final adminBackgroundColor = Theme.of(context).brightness == Brightness.dark
+        ? AppColors.accent.withOpacity(0.3)
+        : AppColors.accent.withOpacity(0.25);
+    final adminBorderColor = AppColors.accent;
+    final adminTextColor = Theme.of(context).brightness == Brightness.dark
+        ? AppColors.accent
+        : const Color(0xFFD97706); // Darker amber for better contrast
 
     return Padding(
       padding: EdgeInsets.only(bottom: ScreenUnitUtil.getSpacing(12)),
@@ -121,7 +184,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         children: [
           // Avatar and message for received messages (left side)
           if (!isMe) ...[
-            _buildAvatar(message.senderProfileImage, false),
+            _buildAvatar(message.senderProfileImage, false, isAdmin: isAdmin),
             SizedBox(width: ScreenUnitUtil.getSpacing(8)),
             Flexible(
               child: Container(
@@ -130,23 +193,60 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   vertical: ScreenUnitUtil.getSpacing(10),
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.darkSurface.withOpacity(0.8)
-                      : AppColors.secondaryHover,
+                  color: isAdmin
+                      ? adminBackgroundColor
+                      : (Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkSurface.withOpacity(0.8)
+                          : AppColors.secondaryHover),
                   borderRadius: BorderRadius.circular(
                     ScreenUnitUtil.getSpacing(16),
                   ),
+                  border: isAdmin
+                      ? Border.all(
+                          color: adminBorderColor.withOpacity(0.5),
+                          width: 1.5,
+                        )
+                      : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      message.senderName,
-                      style: TextStyle(
-                        fontSize: ScreenUnitUtil.getFontSize(12),
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.secondary,
-                      ),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: ScreenUnitUtil.getSpacing(6),
+                      children: [
+                        Text(
+                          message.senderName,
+                          style: TextStyle(
+                            fontSize: ScreenUnitUtil.getFontSize(12),
+                            fontWeight: FontWeight.w600,
+                            color: isAdmin ? adminTextColor : AppColors.secondary,
+                          ),
+                        ),
+                        if (isAdmin)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: ScreenUnitUtil.getSpacing(6),
+                              vertical: ScreenUnitUtil.getSpacing(2),
+                            ),
+                            decoration: BoxDecoration(
+                              color: adminBorderColor,
+                              borderRadius: BorderRadius.circular(
+                                ScreenUnitUtil.getSpacing(8),
+                              ),
+                            ),
+                            child: Text(
+                              'System',
+                              style: TextStyle(
+                                fontSize: ScreenUnitUtil.getFontSize(9),
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     SizedBox(height: ScreenUnitUtil.getSpacing(4)),
                     Text(
@@ -181,14 +281,41 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   vertical: ScreenUnitUtil.getSpacing(10),
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.secondary,
+                  color: isAdmin
+                      ? AppColors.accent // Solid gold/amber for admin sent messages
+                      : AppColors.secondary,
                   borderRadius: BorderRadius.circular(
                     ScreenUnitUtil.getSpacing(16),
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (isAdmin)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: ScreenUnitUtil.getSpacing(4)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.admin_panel_settings,
+                              size: ScreenUnitUtil.getFontSize(12),
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: ScreenUnitUtil.getSpacing(4)),
+                            Text(
+                              'ADMIN',
+                              style: TextStyle(
+                                fontSize: ScreenUnitUtil.getFontSize(9),
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     Text(
                       message.message,
                       style: TextStyle(
@@ -209,7 +336,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             SizedBox(width: ScreenUnitUtil.getSpacing(8)),
-            _buildAvatar(message.senderProfileImage, true),
+            _buildAvatar(message.senderProfileImage, true, isAdmin: isAdmin),
           ],
         ],
       ),
@@ -299,13 +426,15 @@ Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
     return '$displayHour:$minute $period';
   }
 
-  Widget _buildAvatar(String? profileImageUrl, bool isMe) {
+  Widget _buildAvatar(String? profileImageUrl, bool isMe, {bool isAdmin = false}) {
     final radius = ScreenUnitUtil.getWidth(16);
     
     if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
       return CircleAvatar(
         radius: radius,
-        backgroundColor: AppColors.secondary.withOpacity(0.1),
+        backgroundColor: isAdmin
+            ? AppColors.accent.withOpacity(0.2)
+            : AppColors.secondary.withOpacity(0.1),
         backgroundImage: NetworkImage(_getImageUrl(profileImageUrl)),
         onBackgroundImageError: (exception, stackTrace) {
           // Image failed to load - will show background color only
@@ -316,16 +445,26 @@ Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
     
     return CircleAvatar(
       radius: radius,
-      backgroundColor: isMe
-          ? (Theme.of(context).brightness == Brightness.dark
-              ? AppColors.darkPrimary.withOpacity(0.2)
-              : AppColors.primary.withOpacity(0.1))
-          : AppColors.secondary.withOpacity(0.1),
-      child: _buildAvatarIcon(isMe),
+      backgroundColor: isAdmin
+          ? AppColors.accent.withOpacity(0.2)
+          : (isMe
+              ? (Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkPrimary.withOpacity(0.2)
+                  : AppColors.primary.withOpacity(0.1))
+              : AppColors.secondary.withOpacity(0.1)),
+      child: _buildAvatarIcon(isMe, isAdmin: isAdmin),
     );
   }
 
-  Widget _buildAvatarIcon(bool isMe) {
+  Widget _buildAvatarIcon(bool isMe, {bool isAdmin = false}) {
+    if (isAdmin) {
+      return Icon(
+        Icons.admin_panel_settings,
+        size: ScreenUnitUtil.getFontSize(16),
+        color: AppColors.accent,
+      );
+    }
+    
     return Icon(
       Icons.person,
       size: ScreenUnitUtil.getFontSize(16),
