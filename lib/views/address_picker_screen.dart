@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../utils/screen_unit_util.dart';
 import '../resources/components/primary_button.dart';
 
@@ -24,6 +26,8 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
   final MapController _mapController = MapController();
   LatLng? _selectedLocation;
   bool _isLoadingLocation = false;
+  String? _selectedAddress;
+  bool _isLoadingAddress = false;
 
   @override
   void initState() {
@@ -43,6 +47,8 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
       if (widget.initialLatitude != null && widget.initialLongitude != null) {
         initialLocation = LatLng(widget.initialLatitude!, widget.initialLongitude!);
         _selectedLocation = initialLocation;
+        // Get address for initial location
+        _getAddressFromCoordinates(widget.initialLatitude!, widget.initialLongitude!);
       } else {
         // Try to get current location
         bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -65,6 +71,8 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
             );
             initialLocation = LatLng(position.latitude, position.longitude);
             _selectedLocation = initialLocation;
+            // Get address for current location
+            _getAddressFromCoordinates(position.latitude, position.longitude);
           }
         }
       }
@@ -85,7 +93,52 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
   void _onMapTap(TapPosition tapPosition, LatLng point) {
     setState(() {
       _selectedLocation = point;
+      _selectedAddress = null; // Clear previous address
     });
+    _getAddressFromCoordinates(point.latitude, point.longitude);
+  }
+
+  Future<void> _getAddressFromCoordinates(double latitude, double longitude) async {
+    setState(() {
+      _isLoadingAddress = true;
+    });
+
+    try {
+      // Use Nominatim reverse geocoding API
+      final url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=$latitude&lon=$longitude&zoom=18&addressdetails=1';
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'User-Agent': 'HR Employee App', // Required by Nominatim
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final address = data['display_name'] as String?;
+        
+        if (mounted) {
+          setState(() {
+            _selectedAddress = address ?? 'Address not found';
+            _isLoadingAddress = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _selectedAddress = 'Unable to fetch address';
+            _isLoadingAddress = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _selectedAddress = 'Unable to fetch address';
+          _isLoadingAddress = false;
+        });
+      }
+    }
   }
 
   void _confirmLocation() {
@@ -93,6 +146,7 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
       Navigator.of(context).pop({
         'latitude': _selectedLocation!.latitude,
         'longitude': _selectedLocation!.longitude,
+        'address': _selectedAddress,
       });
     }
   }
@@ -207,7 +261,7 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
             ),
           ),
 
-          // Selected coordinates display
+          // Selected address display
           if (_selectedLocation != null)
             Positioned(
               bottom: ScreenUnitUtil.getSpacing(100),
@@ -238,15 +292,35 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
                       ),
                     ),
                     SizedBox(height: ScreenUnitUtil.getSpacing(4)),
-                    Text(
-                      'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, '
-                      'Lng: ${_selectedLocation!.longitude.toStringAsFixed(6)}',
-                      style: TextStyle(
-                        fontSize: ScreenUnitUtil.getFontSize(14),
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
+                    if (_isLoadingAddress)
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: ScreenUnitUtil.getFontSize(16),
+                            height: ScreenUnitUtil.getFontSize(16),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+                          Text(
+                            'Loading address...',
+                            style: TextStyle(
+                              fontSize: ScreenUnitUtil.getFontSize(14),
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (_selectedAddress != null)
+                      Text(
+                        _selectedAddress!,
+                        style: TextStyle(
+                          fontSize: ScreenUnitUtil.getFontSize(14),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

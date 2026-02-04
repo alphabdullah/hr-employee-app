@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../viewmodels/signup_viewmodel.dart';
@@ -7,6 +8,34 @@ import '../../resources/components/primary_button.dart';
 import '../../resources/components/step_indicator.dart';
 import '../../routes/route_names.dart';
 import '../../utils/toast_message.dart';
+
+/// Text input formatter for Date (DD/MM/YYYY)
+class DateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String formatted = '';
+    for (int i = 0; i < text.length && i < 8; i++) {
+      if (i == 2 || i == 4) {
+        formatted += '/';
+      }
+      formatted += text[i];
+    }
+
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 /// Step 2: Compliance Information Screen
 class SignUpStep2Screen extends StatefulWidget {
@@ -75,7 +104,18 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
             _drivingLicenseNoController.text = step2Model.drivingLicenseNo!;
           }
           if (step2Model.drivingLicenseDate != null) {
-            _drivingLicenseDateController.text = step2Model.drivingLicenseDate!;
+            // Convert YYYY-MM-DD to DD/MM/YYYY for display
+            try {
+              final dateParts = step2Model.drivingLicenseDate!.split('-');
+              if (dateParts.length == 3) {
+                _drivingLicenseDateController.text =
+                    '${dateParts[2]}/${dateParts[1]}/${dateParts[0]}';
+              } else {
+                _drivingLicenseDateController.text = step2Model.drivingLicenseDate!;
+              }
+            } catch (e) {
+              _drivingLicenseDateController.text = step2Model.drivingLicenseDate!;
+            }
           }
           if (step2Model.otherCardText != null) {
             _otherCardTextController.text = step2Model.otherCardText!;
@@ -145,13 +185,46 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
                             TextFormField(
                               controller: _drivingLicenseNoController,
                               decoration: InputDecoration(
-                                labelText: 'Driving license number',
-                                prefixIcon: Icon(Icons.badge_outlined),
+                                labelText: 'Driving License Number *',
+                                prefixIcon: const Icon(Icons.badge_outlined),
+                                errorStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: ScreenUnitUtil.getFontSize(12),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
                               ),
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(100),
+                              ],
                               onChanged: viewModel.updateStep2DrivingLicenseNo,
                               validator: (value) {
-                                if (_isDriver && (value == null || value.isEmpty)) {
-                                  return 'License number is required';
+                                if (_isDriver) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Driving license number is required';
+                                  }
+                                  if (value.length > 100) {
+                                    return 'Driving license number must be maximum 100 characters';
+                                  }
+                                  if (value.trim().isEmpty) {
+                                    return 'Driving license number cannot be only spaces';
+                                  }
                                 }
                                 return null;
                               },
@@ -159,27 +232,137 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
                             SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                             TextFormField(
                               controller: _drivingLicenseDateController,
-                              readOnly: true,
+                              keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                labelText: 'Driving license date',
-                                prefixIcon: Icon(Icons.calendar_today_outlined),
+                                labelText: 'Driving License Date (DD/MM/YYYY) *',
+                                hintText: 'DD/MM/YYYY or tap calendar icon',
+                                prefixIcon: const Icon(Icons.calendar_today_outlined),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.calendar_month),
+                                  onPressed: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: _drivingLicenseDateController.text.isNotEmpty
+                                          ? (() {
+                                              try {
+                                                final parts = _drivingLicenseDateController.text.split('/');
+                                                if (parts.length == 3) {
+                                                  return DateTime(
+                                                    int.parse(parts[2]),
+                                                    int.parse(parts[1]),
+                                                    int.parse(parts[0]),
+                                                  );
+                                                }
+                                              } catch (e) {
+                                                // Invalid date
+                                              }
+                                              return DateTime.now();
+                                            })()
+                                          : DateTime.now(),
+                                      firstDate: DateTime(1970),
+                                      lastDate: DateTime.now(),
+                                    );
+                                    if (picked != null) {
+                                      // Format as DD/MM/YYYY for display
+                                      _drivingLicenseDateController.text =
+                                          '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+                                      // Convert to YYYY-MM-DD for backend
+                                      final dateStr =
+                                          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                                      viewModel.updateStep2DrivingLicenseDate(dateStr);
+                                    }
+                                  },
+                                ),
+                                errorStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: ScreenUnitUtil.getFontSize(12),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
                               ),
-                              onTap: () async {
-                                final picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: DateTime.now(),
-                                  firstDate: DateTime(1970),
-                                  lastDate: DateTime.now(),
-                                );
-                                if (picked != null) {
-                                  final formatted = DateFormat('yyyy-MM-dd').format(picked);
-                                  _drivingLicenseDateController.text = formatted;
-                                  viewModel.updateStep2DrivingLicenseDate(formatted);
+                              inputFormatters: [
+                                DateFormatter(),
+                                LengthLimitingTextInputFormatter(10),
+                              ],
+                              onChanged: (value) {
+                                // Convert DD/MM/YYYY to YYYY-MM-DD for backend
+                                if (value.length == 10) {
+                                  final parts = value.split('/');
+                                  if (parts.length == 3) {
+                                    try {
+                                      final day = int.parse(parts[0]);
+                                      final month = int.parse(parts[1]);
+                                      final year = int.parse(parts[2]);
+                                      if (day >= 1 &&
+                                          day <= 31 &&
+                                          month >= 1 &&
+                                          month <= 12 &&
+                                          year >= 1970 &&
+                                          year <= DateTime.now().year) {
+                                        final dateStr =
+                                            '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+                                        viewModel.updateStep2DrivingLicenseDate(dateStr);
+                                      }
+                                    } catch (e) {
+                                      // Invalid date format
+                                    }
+                                  }
+                                } else {
+                                  viewModel.updateStep2DrivingLicenseDate(null);
                                 }
                               },
                               validator: (value) {
-                                if (_isDriver && (value == null || value.isEmpty)) {
-                                  return 'Driving license date is required';
+                                if (_isDriver) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Driving license date is required';
+                                  }
+                                  if (value.length != 10) {
+                                    return 'Please enter a complete date (DD/MM/YYYY)';
+                                  }
+                                  final parts = value.split('/');
+                                  if (parts.length != 3) {
+                                    return 'Invalid date format. Use DD/MM/YYYY';
+                                  }
+                                  try {
+                                    final day = int.parse(parts[0]);
+                                    final month = int.parse(parts[1]);
+                                    final year = int.parse(parts[2]);
+
+                                    if (day < 1 || day > 31)
+                                      return 'Day must be between 1 and 31';
+                                    if (month < 1 || month > 12)
+                                      return 'Month must be between 1 and 12';
+                                    if (year < 1970 || year > DateTime.now().year)
+                                      return 'Year must be between 1970 and ${DateTime.now().year}';
+
+                                    final date = DateTime(year, month, day);
+                                    if (date.year != year ||
+                                        date.month != month ||
+                                        date.day != day)
+                                      return 'Invalid date';
+
+                                    if (date.isAfter(DateTime.now())) {
+                                      return 'Driving license date cannot be in the future';
+                                    }
+                                  } catch (e) {
+                                    return 'Invalid date format';
+                                  }
                                 }
                                 return null;
                               },
@@ -208,8 +391,30 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
                             DropdownButtonFormField<String>(
                               value: viewModel.step2Model.criminalRecordType,
                               decoration: InputDecoration(
-                                labelText: 'Criminal record type',
-                                prefixIcon: Icon(Icons.lock_outline),
+                                labelText: 'Criminal Record Type *',
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                errorStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: ScreenUnitUtil.getFontSize(12),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
                               ),
                               items: const [
                                 DropdownMenuItem(value: 'spent', child: Text('Spent')),
@@ -217,8 +422,13 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
                               ],
                               onChanged: viewModel.updateStep2CriminalRecordType,
                               validator: (value) {
-                                if (_criminalRecord && value == null) {
-                                  return 'Select record type';
+                                if (_criminalRecord) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Criminal record type is required';
+                                  }
+                                  if (value != 'spent' && value != 'unspent') {
+                                    return 'Criminal record type must be "spent" or "unspent"';
+                                  }
                                 }
                                 return null;
                               },
@@ -290,10 +500,46 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
                           TextFormField(
                             controller: _otherCardTextController,
                             decoration: InputDecoration(
-                              labelText: 'Other licence details',
-                              prefixIcon: Icon(Icons.description_outlined),
+                              labelText: 'Other Licence Details',
+                              prefixIcon: const Icon(Icons.description_outlined),
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: ScreenUnitUtil.getFontSize(12),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
                             ),
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(255),
+                            ],
                             onChanged: viewModel.updateStep2OtherCardText,
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (value.length > 255) {
+                                  return 'Other licence details must be maximum 255 characters';
+                                }
+                                if (value.trim().isEmpty) {
+                                  return 'Other licence details cannot be only spaces';
+                                }
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -309,19 +555,99 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
                             TextFormField(
                               controller: _disabilityAdjustmentsTextController,
                               decoration: InputDecoration(
-                                labelText: 'Adjustments',
-                                prefixIcon: Icon(Icons.accessible_outlined),
+                                labelText: 'Adjustments *',
+                                prefixIcon: const Icon(Icons.accessible_outlined),
+                                errorStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: ScreenUnitUtil.getFontSize(12),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
                               ),
+                              maxLines: 3,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(500),
+                              ],
                               onChanged: viewModel.updateStep2DisabilityAdjustmentsText,
+                              validator: (value) {
+                                if (_registeredDisabled) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Disability adjustments are required';
+                                  }
+                                  if (value.length > 500) {
+                                    return 'Disability adjustments must be maximum 500 characters';
+                                  }
+                                  if (value.trim().isEmpty) {
+                                    return 'Disability adjustments cannot be only spaces';
+                                  }
+                                }
+                                return null;
+                              },
                             ),
                             SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                             TextFormField(
                               controller: _disabilityDetailsTextController,
                               decoration: InputDecoration(
-                                labelText: 'Disability details',
-                                prefixIcon: Icon(Icons.notes_outlined),
+                                labelText: 'Disability Details *',
+                                prefixIcon: const Icon(Icons.notes_outlined),
+                                errorStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: ScreenUnitUtil.getFontSize(12),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    ScreenUnitUtil.getSpacing(8),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.error,
+                                    width: 2,
+                                  ),
+                                ),
                               ),
+                              maxLines: 3,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(500),
+                              ],
                               onChanged: viewModel.updateStep2DisabilityDetailsText,
+                              validator: (value) {
+                                if (_registeredDisabled) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Disability details are required';
+                                  }
+                                  if (value.length > 500) {
+                                    return 'Disability details must be maximum 500 characters';
+                                  }
+                                  if (value.trim().isEmpty) {
+                                    return 'Disability details cannot be only spaces';
+                                  }
+                                }
+                                return null;
+                              },
                             ),
                             SizedBox(height: ScreenUnitUtil.getSpacing(16)),
                           ],

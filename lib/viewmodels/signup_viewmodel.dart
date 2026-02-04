@@ -173,7 +173,10 @@ class SignUpViewModel extends ChangeNotifier {
   }
 
   void updateStep1Location(double? latitude, double? longitude) {
-    _step1Model = _step1Model.copyWith(latitude: latitude, longitude: longitude);
+    _step1Model = _step1Model.copyWith(
+      latitude: latitude,
+      longitude: longitude,
+    );
     _errorMessage = null;
     notifyListeners();
   }
@@ -290,7 +293,9 @@ class SignUpViewModel extends ChangeNotifier {
           if (result != null) {
             updateStep1Country(result['country'] as String?);
             updateStep1Region(result['region'] as String?);
-            updateStep1District(result['admin_district'] as String?); // Suggest district, user can edit
+            updateStep1District(
+              result['admin_district'] as String?,
+            ); // Suggest district, user can edit
           } else {
             _errorMessage = 'No data found for this postcode.';
           }
@@ -325,7 +330,9 @@ class SignUpViewModel extends ChangeNotifier {
     if (_step1Model.email.isEmpty) {
       return 'Please enter your email address';
     }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_step1Model.email)) {
+    if (!RegExp(
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    ).hasMatch(_step1Model.email)) {
       return 'Please enter a valid email address';
     }
 
@@ -361,15 +368,18 @@ class SignUpViewModel extends ChangeNotifier {
       }
     }
 
-    if (_step1Model.latitude != null && (_step1Model.latitude! < -90 || _step1Model.latitude! > 90)) {
+    if (_step1Model.latitude != null &&
+        (_step1Model.latitude! < -90 || _step1Model.latitude! > 90)) {
       return 'Latitude must be between -90 and 90';
     }
-    if (_step1Model.longitude != null && (_step1Model.longitude! < -180 || _step1Model.longitude! > 180)) {
+    if (_step1Model.longitude != null &&
+        (_step1Model.longitude! < -180 || _step1Model.longitude! > 180)) {
       return 'Longitude must be between -180 and 180';
     }
 
     if (_step1Model.studentVisaHoursPerWeek != null &&
-        (_step1Model.studentVisaHoursPerWeek! < 0 || _step1Model.studentVisaHoursPerWeek! > 168)) {
+        (_step1Model.studentVisaHoursPerWeek! < 0 ||
+            _step1Model.studentVisaHoursPerWeek! > 168)) {
       return 'Student visa hours must be between 0 and 168';
     }
 
@@ -431,6 +441,7 @@ class SignUpViewModel extends ChangeNotifier {
       return false;
     }
   }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
@@ -534,36 +545,43 @@ class SignUpViewModel extends ChangeNotifier {
   /// Validate Step 2
   String? validateStep2() {
     if (_step2Model.isDriver == true) {
-      if (_step2Model.drivingLicenseNo == null || _step2Model.drivingLicenseNo!.isEmpty) {
+      if (_step2Model.drivingLicenseNo == null ||
+          _step2Model.drivingLicenseNo!.isEmpty) {
         return 'Driving license number is required when driver is selected';
       }
       if (_step2Model.drivingLicenseNo!.length > 100) {
         return 'Driving license number must be maximum 100 characters';
       }
-      if (_step2Model.drivingLicenseDate == null || _step2Model.drivingLicenseDate!.isEmpty) {
+      if (_step2Model.drivingLicenseDate == null ||
+          _step2Model.drivingLicenseDate!.isEmpty) {
         return 'Driving license date is required when driver is selected';
       }
     }
 
     if (_step2Model.criminalRecord == true) {
-      if (_step2Model.criminalRecordType == null || _step2Model.criminalRecordType!.isEmpty) {
+      if (_step2Model.criminalRecordType == null ||
+          _step2Model.criminalRecordType!.isEmpty) {
         return 'Criminal record type is required when criminal record is selected';
       }
-      if (_step2Model.criminalRecordType != 'spent' && _step2Model.criminalRecordType != 'unspent') {
+      if (_step2Model.criminalRecordType != 'spent' &&
+          _step2Model.criminalRecordType != 'unspent') {
         return 'Criminal record type must be "spent" or "unspent"';
       }
     }
 
     if (_step2Model.registeredDisabled == true) {
-      if (_step2Model.disabilityAdjustmentsText == null || _step2Model.disabilityAdjustmentsText!.isEmpty) {
+      if (_step2Model.disabilityAdjustmentsText == null ||
+          _step2Model.disabilityAdjustmentsText!.isEmpty) {
         return 'Disability adjustments text is required when registered disabled is selected';
       }
-      if (_step2Model.disabilityDetailsText == null || _step2Model.disabilityDetailsText!.isEmpty) {
+      if (_step2Model.disabilityDetailsText == null ||
+          _step2Model.disabilityDetailsText!.isEmpty) {
         return 'Disability details text is required when registered disabled is selected';
       }
     }
 
-    if (_step2Model.otherCardText != null && _step2Model.otherCardText!.length > 255) {
+    if (_step2Model.otherCardText != null &&
+        _step2Model.otherCardText!.length > 255) {
       return 'Other card text must be maximum 255 characters';
     }
 
@@ -831,21 +849,24 @@ class SignUpViewModel extends ChangeNotifier {
 
       // Call /api/me endpoint
       debugPrint('Loading /api/me data...');
-      final response = await ApiClient.get(
-        ApiEndpoints.getMe,
-        token: token,
-      );
+      final response = await ApiClient.get(ApiEndpoints.getMe, token: token);
 
       _isLoadingProfile = false;
 
       if (response.isSuccess) {
         debugPrint('/api/me response: ${response.data}');
-        
+
         // Parse nested structure from /api/me
         final profileData = response.getField<Map<String, dynamic>>('profile');
-        final complianceData = response.getField<Map<String, dynamic>>('compliance');
-        final availabilityData = response.getField<Map<String, dynamic>>('availability');
-        final bankDetailData = response.getField<Map<String, dynamic>>('bank_detail');
+        final complianceData = response.getField<Map<String, dynamic>>(
+          'compliance',
+        );
+        final availabilityData = response.getField<Map<String, dynamic>>(
+          'availability',
+        );
+        final bankDetailData = response.getField<Map<String, dynamic>>(
+          'bank_detail',
+        );
         final email = response.getField<String>('email') ?? '';
         final name = response.getField<String>('name') ?? '';
 
@@ -853,7 +874,11 @@ class SignUpViewModel extends ChangeNotifier {
         if (profileData != null) {
           _step1Model = RegisterStep1Model(
             name: profileData['name'] ?? name.split(' ').first,
-            surname: profileData['surname'] ?? (name.split(' ').length > 1 ? name.split(' ').skip(1).join(' ') : ''),
+            surname:
+                profileData['surname'] ??
+                (name.split(' ').length > 1
+                    ? name.split(' ').skip(1).join(' ')
+                    : ''),
             email: email,
             password: '', // Don't pre-fill password
             passwordConfirmation: '',
@@ -863,8 +888,12 @@ class SignUpViewModel extends ChangeNotifier {
             address: profileData['address'],
             country: profileData['country'],
             city: profileData['city'],
-            latitude: profileData['latitude'] != null ? double.tryParse(profileData['latitude'].toString()) : null,
-            longitude: profileData['longitude'] != null ? double.tryParse(profileData['longitude'].toString()) : null,
+            latitude: profileData['latitude'] != null
+                ? double.tryParse(profileData['latitude'].toString())
+                : null,
+            longitude: profileData['longitude'] != null
+                ? double.tryParse(profileData['longitude'].toString())
+                : null,
             postCode: profileData['post_code'],
             natInsuranceNo: profileData['nat_insurance_no'],
             nationality: profileData['nationality'],
@@ -872,7 +901,10 @@ class SignUpViewModel extends ChangeNotifier {
             gender: profileData['gender'],
             maritalStatus: profileData['marital_status'],
             needWorkPermit: profileData['need_work_permit'],
-            workPermitExpiry: profileData['work_permit_expiry']?.toString().split('T').first,
+            workPermitExpiry: profileData['work_permit_expiry']
+                ?.toString()
+                .split('T')
+                .first,
             studentVisaHoursPerWeek: profileData['student_visa_hours_per_week'],
             preferContact: profileData['prefer_contact'],
             userType: profileData['user_type'],
@@ -884,7 +916,10 @@ class SignUpViewModel extends ChangeNotifier {
           _step2Model = RegisterStep2Model(
             isDriver: complianceData['is_driver'],
             drivingLicenseNo: complianceData['driving_license_no'],
-            drivingLicenseDate: complianceData['driving_license_date']?.toString().split('T').first,
+            drivingLicenseDate: complianceData['driving_license_date']
+                ?.toString()
+                .split('T')
+                .first,
             ownCar: complianceData['own_car'],
             criminalRecord: complianceData['criminal_record'],
             criminalRecordType: complianceData['criminal_record_type'],
@@ -895,7 +930,8 @@ class SignUpViewModel extends ChangeNotifier {
             firstAid: complianceData['first_aid'] ?? false,
             otherCardText: complianceData['other_card_text'],
             registeredDisabled: complianceData['registered_disabled'],
-            disabilityAdjustmentsText: complianceData['disability_adjustments_text'],
+            disabilityAdjustmentsText:
+                complianceData['disability_adjustments_text'],
             disabilityDetailsText: complianceData['disability_details_text'],
           );
         }
@@ -967,15 +1003,19 @@ class SignUpViewModel extends ChangeNotifier {
       }
 
       // Build JSON - only include password if provided
-      final jsonBody = _step1Model.toJson(includePassword: _step1Model.password.isNotEmpty);
-      
+      final jsonBody = _step1Model.toJson(
+        includePassword: _step1Model.password.isNotEmpty,
+      );
+
       debugPrint('Updating Step 1 (edit mode): $jsonBody');
       final response = await ApiClient.put(
         ApiEndpoints.updateProfileStep1,
         token: token,
         body: jsonBody,
       );
-      debugPrint('Update Step 1 response: ${response.statusCode} ${response.data}');
+      debugPrint(
+        'Update Step 1 response: ${response.statusCode} ${response.data}',
+      );
 
       _isStepLoading = false;
 
@@ -1031,7 +1071,9 @@ class SignUpViewModel extends ChangeNotifier {
         token: token,
         body: payload,
       );
-      debugPrint('Update Step 2 response: ${response.statusCode} ${response.data}');
+      debugPrint(
+        'Update Step 2 response: ${response.statusCode} ${response.data}',
+      );
 
       _isStepLoading = false;
 
@@ -1080,7 +1122,9 @@ class SignUpViewModel extends ChangeNotifier {
         token: token,
         body: payload,
       );
-      debugPrint('Update Step 3 response: ${response.statusCode} ${response.data}');
+      debugPrint(
+        'Update Step 3 response: ${response.statusCode} ${response.data}',
+      );
 
       _isStepLoading = false;
 
@@ -1129,7 +1173,9 @@ class SignUpViewModel extends ChangeNotifier {
         token: token,
         body: payload,
       );
-      debugPrint('Update Step 4 response: ${response.statusCode} ${response.data}');
+      debugPrint(
+        'Update Step 4 response: ${response.statusCode} ${response.data}',
+      );
 
       _isStepLoading = false;
 

@@ -12,7 +12,7 @@
 // /// Step 1: Profile & Account Information Screen
 // class SignUpStep1Screen extends StatefulWidget {
 //   final bool isEditMode;
-  
+
 //   const SignUpStep1Screen({
 //     super.key,
 //     this.isEditMode = false,
@@ -34,7 +34,7 @@
 //   final _whatsappNoController = TextEditingController();
 //   final _addressController = TextEditingController();
 //   final _countryController = TextEditingController();
-  
+
 //   final _cityController = TextEditingController();
 //   final _postCodeController = TextEditingController();
 //   final _natInsuranceNoController = TextEditingController();
@@ -78,7 +78,7 @@
 //       final viewModel = context.read<SignUpViewModel>();
 //       viewModel.goToStep(1);
 //       viewModel.setEditMode(widget.isEditMode);
-      
+
 //       // Load profile data to prefill forms
 //       viewModel.loadProfileData().then((_) {
 //         if (mounted) {
@@ -132,7 +132,7 @@
 //               children: [
 //                 // Step Indicator
 //                 StepIndicator(currentStep: 1, totalSteps: 4),
-                
+
 //                 // Form Content
 //                 Expanded(
 //                   child: SingleChildScrollView(
@@ -656,6 +656,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -666,14 +667,89 @@ import '../../resources/components/step_indicator.dart';
 import '../../routes/route_names.dart';
 import '../../utils/toast_message.dart';
 
+/// Text input formatter for Date of Birth (DD/MM/YYYY)
+class DateOfBirthFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String formatted = '';
+    for (int i = 0; i < text.length && i < 8; i++) {
+      if (i == 2 || i == 4) {
+        formatted += '/';
+      }
+      formatted += text[i];
+    }
+
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+/// Text input formatter for Phone Number with +44 prefix (editable)
+class PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String text = newValue.text;
+
+    // If text is empty, allow it (don't force +44)
+    if (text.isEmpty) {
+      return newValue;
+    }
+
+    // If user starts typing digits in an empty field, auto-add +44
+    if (oldValue.text.isEmpty && text.isNotEmpty) {
+      // Check if user is typing digits (not a + sign)
+      if (text[0] != '+' && RegExp(r'^\d').hasMatch(text)) {
+        // User started with a digit, add +44 prefix
+        String digitsOnly = text.replaceAll(RegExp(r'[^\d]'), '');
+        text = '+44 $digitsOnly';
+        return newValue.copyWith(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        );
+      }
+    }
+
+    // If user is editing existing text, allow full editing
+    // User can delete or modify +44, or use a different country code
+    // Just clean up formatting (remove extra spaces)
+    if (text.startsWith('+')) {
+      // Has country code, clean up spaces but keep the code editable
+      String cleaned = text.replaceAll(RegExp(r'\s+'), ' ');
+      // Ensure space after country code if it's +44
+      if (cleaned.startsWith('+44') &&
+          cleaned.length > 3 &&
+          cleaned[3] != ' ') {
+        cleaned = '+44 ${cleaned.substring(3).trim()}';
+      }
+      return newValue.copyWith(text: cleaned, selection: newValue.selection);
+    }
+
+    // No + prefix - user might be typing their own format
+    // Allow it but clean up extra spaces
+    String cleaned = text.replaceAll(RegExp(r'\s+'), ' ');
+    return newValue.copyWith(text: cleaned, selection: newValue.selection);
+  }
+}
+
 /// Step 1: Profile & Account Information Screen
 class SignUpStep1Screen extends StatefulWidget {
   final bool isEditMode;
 
-  const SignUpStep1Screen({
-    super.key,
-    this.isEditMode = false,
-  });
+  const SignUpStep1Screen({super.key, this.isEditMode = false});
 
   @override
   State<SignUpStep1Screen> createState() => _SignUpStep1ScreenState();
@@ -753,20 +829,70 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
       _surnameController.text = step1Model.surname;
       _emailController.text = step1Model.email;
 
-      if (step1Model.dob != null) _dobController.text = step1Model.dob!;
-      if (step1Model.telNo != null) _telNoController.text = step1Model.telNo!;
-      if (step1Model.whatsappNo != null) _whatsappNoController.text = step1Model.whatsappNo!;
-      if (step1Model.address != null) _addressController.text = step1Model.address!;
-      if (step1Model.country != null) _countryController.text = step1Model.country!;
-      if (step1Model.region != null) _regionController.text = step1Model.region!;
-      if (step1Model.district != null) _districtController.text = step1Model.district!;
+      if (step1Model.dob != null) {
+        // Convert YYYY-MM-DD to DD/MM/YYYY for display
+        try {
+          final dateParts = step1Model.dob!.split('-');
+          if (dateParts.length == 3) {
+            _dobController.text =
+                '${dateParts[2]}/${dateParts[1]}/${dateParts[0]}';
+          } else {
+            _dobController.text = step1Model.dob!;
+          }
+        } catch (e) {
+          _dobController.text = step1Model.dob!;
+        }
+      }
+      if (step1Model.telNo != null && step1Model.telNo!.isNotEmpty) {
+        String telNo = step1Model.telNo!;
+        // If doesn't start with +44, add it
+        if (!telNo.startsWith('+44')) {
+          // Remove any existing + or country code
+          telNo = telNo.replaceAll(RegExp(r'^\+?\d{0,2}'), '');
+          telNo = telNo.replaceAll(RegExp(r'[^\d]'), '');
+          _telNoController.text = '+44 $telNo';
+        } else {
+          _telNoController.text = telNo;
+        }
+      } else {
+        // Initialize empty field with +44
+        _telNoController.text = '+44 ';
+      }
+      if (step1Model.whatsappNo != null && step1Model.whatsappNo!.isNotEmpty) {
+        String whatsappNo = step1Model.whatsappNo!;
+        // If doesn't start with +44, add it
+        if (!whatsappNo.startsWith('+44')) {
+          // Remove any existing + or country code
+          whatsappNo = whatsappNo.replaceAll(RegExp(r'^\+?\d{0,2}'), '');
+          whatsappNo = whatsappNo.replaceAll(RegExp(r'[^\d]'), '');
+          _whatsappNoController.text = '+44 $whatsappNo';
+        } else {
+          _whatsappNoController.text = whatsappNo;
+        }
+      } else {
+        // Initialize empty field with +44
+        _whatsappNoController.text = '+44 ';
+      }
+      if (step1Model.address != null)
+        _addressController.text = step1Model.address!;
+      if (step1Model.country != null)
+        _countryController.text = step1Model.country!;
+      if (step1Model.region != null)
+        _regionController.text = step1Model.region!;
+      if (step1Model.district != null)
+        _districtController.text = step1Model.district!;
       if (step1Model.city != null) _cityController.text = step1Model.city!;
-      if (step1Model.postCode != null) _postCodeController.text = step1Model.postCode!;
-      if (step1Model.natInsuranceNo != null) _natInsuranceNoController.text = step1Model.natInsuranceNo!;
-      if (step1Model.nationality != null) _nationalityController.text = step1Model.nationality!;
-      if (step1Model.workPermitExpiry != null) _workPermitExpiryController.text = step1Model.workPermitExpiry!;
+      if (step1Model.postCode != null)
+        _postCodeController.text = step1Model.postCode!;
+      if (step1Model.natInsuranceNo != null)
+        _natInsuranceNoController.text = step1Model.natInsuranceNo!;
+      if (step1Model.nationality != null)
+        _nationalityController.text = step1Model.nationality!;
+      if (step1Model.workPermitExpiry != null)
+        _workPermitExpiryController.text = step1Model.workPermitExpiry!;
       if (step1Model.studentVisaHoursPerWeek != null) {
-        _studentVisaHoursController.text = step1Model.studentVisaHoursPerWeek.toString();
+        _studentVisaHoursController.text = step1Model.studentVisaHoursPerWeek
+            .toString();
       }
 
       setState(() {});
@@ -794,6 +920,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
             // Keep read-only fields synced
             _countryController.text = viewModel.step1Model.country ?? '';
             _regionController.text = viewModel.step1Model.region ?? '';
+            _districtController.text = viewModel.step1Model.district ?? '';
 
             return Column(
               children: [
@@ -823,7 +950,9 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             'Please provide your basic information',
                             style: TextStyle(
                               fontSize: ScreenUnitUtil.getFontSize(14),
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(24)),
@@ -837,7 +966,12 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ),
                             onChanged: viewModel.updateStep1Name,
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Please enter your name';
+                              if (value == null || value.isEmpty)
+                                return 'Please enter your name';
+                              if (value.length > 255)
+                                return 'Name must be maximum 255 characters';
+                              if (value.trim().isEmpty)
+                                return 'Name cannot be only spaces';
                               return null;
                             },
                           ),
@@ -852,7 +986,12 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ),
                             onChanged: viewModel.updateStep1Surname,
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Please enter your surname';
+                              if (value == null || value.isEmpty)
+                                return 'Please enter your surname';
+                              if (value.length > 255)
+                                return 'Surname must be maximum 255 characters';
+                              if (value.trim().isEmpty)
+                                return 'Surname cannot be only spaces';
                               return null;
                             },
                           ),
@@ -862,14 +1001,41 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Email *',
-                              prefixIcon: Icon(Icons.email_outlined),
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: ScreenUnitUtil.getFontSize(12),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
                             ),
                             onChanged: viewModel.updateStep1Email,
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Please enter your email';
-                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                              if (value == null || value.isEmpty)
+                                return 'Please enter your email';
+                              if (value.length > 255)
+                                return 'Email must be maximum 255 characters';
+                              if (!RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              ).hasMatch(value)) {
                                 return 'Please enter a valid email';
                               }
                               return null;
@@ -885,10 +1051,40 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: widget.isEditMode
                                   ? 'Password (leave blank to keep current)'
                                   : 'Password *',
+                              hintText:
+                                  'Must have uppercase, lowercase & number',
                               prefixIcon: const Icon(Icons.lock_outline),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                              ),
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: ScreenUnitUtil.getFontSize(12),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
                               ),
                             ),
                             onChanged: viewModel.updateStep1Password,
@@ -896,9 +1092,35 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               final v = value ?? '';
                               if (!widget.isEditMode) {
                                 if (v.isEmpty) return 'Please enter a password';
-                                if (v.length < 8) return 'Password must be at least 8 characters';
+                                if (v.length < 8)
+                                  return 'Password must be at least 8 characters';
+                                if (v.length > 128)
+                                  return 'Password must be maximum 128 characters';
+                                // Check for uppercase letter
+                                if (!RegExp(r'[A-Z]').hasMatch(v))
+                                  return 'Password must contain at least one uppercase letter';
+                                // Check for lowercase letter
+                                if (!RegExp(r'[a-z]').hasMatch(v))
+                                  return 'Password must contain at least one lowercase letter';
+                                // Check for number
+                                if (!RegExp(r'[0-9]').hasMatch(v))
+                                  return 'Password must contain at least one number';
                               } else {
-                                if (v.isNotEmpty && v.length < 8) return 'Password must be at least 8 characters';
+                                if (v.isNotEmpty) {
+                                  if (v.length < 8)
+                                    return 'Password must be at least 8 characters';
+                                  if (v.length > 128)
+                                    return 'Password must be maximum 128 characters';
+                                  // Check for uppercase letter
+                                  if (!RegExp(r'[A-Z]').hasMatch(v))
+                                    return 'Password must contain at least one uppercase letter';
+                                  // Check for lowercase letter
+                                  if (!RegExp(r'[a-z]').hasMatch(v))
+                                    return 'Password must contain at least one lowercase letter';
+                                  // Check for number
+                                  if (!RegExp(r'[0-9]').hasMatch(v))
+                                    return 'Password must contain at least one number';
+                                }
                               }
                               return null;
                             },
@@ -910,27 +1132,61 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             controller: _passwordConfirmationController,
                             obscureText: _obscurePasswordConfirmation,
                             decoration: InputDecoration(
-                              labelText: widget.isEditMode ? 'Confirm Password (if changing)' : 'Confirm Password *',
+                              labelText: widget.isEditMode
+                                  ? 'Confirm Password (if changing)'
+                                  : 'Confirm Password *',
                               prefixIcon: const Icon(Icons.lock_outline),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscurePasswordConfirmation ? Icons.visibility_off : Icons.visibility),
+                                icon: Icon(
+                                  _obscurePasswordConfirmation
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
                                 onPressed: () => setState(
-                                  () => _obscurePasswordConfirmation = !_obscurePasswordConfirmation,
+                                  () => _obscurePasswordConfirmation =
+                                      !_obscurePasswordConfirmation,
+                                ),
+                              ),
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: ScreenUnitUtil.getFontSize(12),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
                                 ),
                               ),
                             ),
-                            onChanged: viewModel.updateStep1PasswordConfirmation,
+                            onChanged:
+                                viewModel.updateStep1PasswordConfirmation,
                             validator: (value) {
                               final confirm = value ?? '';
                               final pass = _passwordController.text;
 
                               if (!widget.isEditMode) {
-                                if (confirm.isEmpty) return 'Please confirm your password';
-                                if (confirm != pass) return 'Passwords do not match';
+                                if (confirm.isEmpty)
+                                  return 'Please confirm your password';
+                                if (confirm != pass)
+                                  return 'Passwords do not match';
                               } else {
                                 if (pass.isNotEmpty) {
-                                  if (confirm.isEmpty) return 'Please confirm your password';
-                                  if (confirm != pass) return 'Passwords do not match';
+                                  if (confirm.isEmpty)
+                                    return 'Please confirm your password';
+                                  if (confirm != pass)
+                                    return 'Passwords do not match';
                                 }
                               }
                               return null;
@@ -938,25 +1194,144 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                          // DOB (read-only)
+                          // DOB (with auto-formatting and calendar picker)
                           TextFormField(
                             controller: _dobController,
-                            readOnly: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Date of Birth (YYYY-MM-DD)',
-                              prefixIcon: Icon(Icons.calendar_today_outlined),
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Date of Birth (DD/MM/YYYY) *',
+                              hintText: 'DD/MM/YYYY or tap calendar icon',
+                              prefixIcon: const Icon(
+                                Icons.calendar_today_outlined,
+                              ),
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: ScreenUnitUtil.getFontSize(12),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.calendar_month),
+                                onPressed: () async {
+                                  // Show calendar picker
+                                  final date = await showDatePicker(
+                                    context: context,
+                                    initialDate: _dobController.text.isNotEmpty
+                                        ? (() {
+                                            try {
+                                              final parts = _dobController.text
+                                                  .split('/');
+                                              if (parts.length == 3) {
+                                                return DateTime(
+                                                  int.parse(parts[2]),
+                                                  int.parse(parts[1]),
+                                                  int.parse(parts[0]),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              // Invalid date
+                                            }
+                                            return DateTime.now().subtract(
+                                              const Duration(days: 365 * 25),
+                                            );
+                                          })()
+                                        : DateTime.now().subtract(
+                                            const Duration(days: 365 * 25),
+                                          ),
+                                    firstDate: DateTime(1900),
+                                    lastDate: DateTime.now(),
+                                  );
+                                  if (date != null) {
+                                    // Format as DD/MM/YYYY
+                                    _dobController.text =
+                                        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+                                    // Convert to YYYY-MM-DD for backend
+                                    final dateStr =
+                                        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                                    viewModel.updateStep1Dob(dateStr);
+                                  }
+                                },
+                              ),
                             ),
-                            onTap: () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
-                                firstDate: DateTime(1900),
-                                lastDate: DateTime.now(),
-                              );
-                              if (date != null) {
-                                _dobController.text = DateFormat('yyyy-MM-dd').format(date);
-                                viewModel.updateStep1Dob(_dobController.text);
+                            inputFormatters: [
+                              DateOfBirthFormatter(),
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                            onChanged: (value) {
+                              // Convert DD/MM/YYYY to YYYY-MM-DD for backend
+                              if (value.length == 10) {
+                                final parts = value.split('/');
+                                if (parts.length == 3) {
+                                  try {
+                                    final day = int.parse(parts[0]);
+                                    final month = int.parse(parts[1]);
+                                    final year = int.parse(parts[2]);
+                                    if (day >= 1 &&
+                                        day <= 31 &&
+                                        month >= 1 &&
+                                        month <= 12 &&
+                                        year >= 1900 &&
+                                        year <= DateTime.now().year) {
+                                      final dateStr =
+                                          '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+                                      viewModel.updateStep1Dob(dateStr);
+                                    }
+                                  } catch (e) {
+                                    // Invalid date format
+                                  }
+                                }
+                              } else {
+                                viewModel.updateStep1Dob(null);
                               }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty)
+                                return 'Please enter your date of birth';
+                              if (value.length != 10)
+                                return 'Please enter a complete date (DD/MM/YYYY)';
+                              final parts = value.split('/');
+                              if (parts.length != 3)
+                                return 'Invalid date format. Use DD/MM/YYYY';
+                              try {
+                                final day = int.parse(parts[0]);
+                                final month = int.parse(parts[1]);
+                                final year = int.parse(parts[2]);
+
+                                if (day < 1 || day > 31)
+                                  return 'Day must be between 1 and 31';
+                                if (month < 1 || month > 12)
+                                  return 'Month must be between 1 and 12';
+                                if (year < 1900 || year > DateTime.now().year)
+                                  return 'Year must be between 1900 and ${DateTime.now().year}';
+
+                                final date = DateTime(year, month, day);
+                                if (date.year != year ||
+                                    date.month != month ||
+                                    date.day != day)
+                                  return 'Invalid date';
+
+                                if (date.isAfter(DateTime.now()))
+                                  return 'Date of birth cannot be in the future';
+                              } catch (e) {
+                                return 'Invalid date format';
+                              }
+                              return null;
                             },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
@@ -965,11 +1340,81 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           TextFormField(
                             controller: _telNoController,
                             keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Telephone Number',
-                              prefixIcon: Icon(Icons.phone_outlined),
+                              hintText: '+44 1234567890',
+                              prefixIcon: const Icon(Icons.phone_outlined),
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: ScreenUnitUtil.getFontSize(12),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
                             ),
-                            onChanged: viewModel.updateStep1TelNo,
+                            inputFormatters: [
+                              PhoneNumberFormatter(),
+                              LengthLimitingTextInputFormatter(20),
+                            ],
+                            onTap: () {
+                              // If field is empty, set +44 when user taps
+                              if (_telNoController.text.isEmpty) {
+                                _telNoController.text = '+44 ';
+                                _telNoController.selection =
+                                    TextSelection.fromPosition(
+                                      TextPosition(
+                                        offset: _telNoController.text.length,
+                                      ),
+                                    );
+                              }
+                            },
+                            onChanged: (value) {
+                              viewModel.updateStep1TelNo(value);
+                            },
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                // Remove spaces, dashes, and parentheses for validation
+                                final cleaned = value.replaceAll(
+                                  RegExp(r'[\s\-\(\)]'),
+                                  '',
+                                );
+                                // Should start with + and country code
+                                if (!cleaned.startsWith('+'))
+                                  return 'Phone number must start with country code (e.g., +44)';
+                                // Check if it contains only digits and + at start
+                                if (!RegExp(r'^\+\d+$').hasMatch(cleaned))
+                                  return 'Phone number must contain only digits after the country code';
+                                // Extract country code and number
+                                final match = RegExp(
+                                  r'^\+\d{1,3}(.+)$',
+                                ).firstMatch(cleaned);
+                                if (match == null)
+                                  return 'Phone number must have a valid country code and number';
+                                final numberPart = match.group(1) ?? '';
+                                // Check if number part has valid length (minimum 7 digits)
+                                if (numberPart.length < 7)
+                                  return 'Phone number must be at least 7 digits after country code';
+                                // Check if total length is maximum 15 digits (country code + number)
+                                if (cleaned.length > 15)
+                                  return 'Phone number including country code must be maximum 15 digits (currently ${cleaned.length} digits)';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -977,11 +1422,81 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           TextFormField(
                             controller: _whatsappNoController,
                             keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'WhatsApp Number',
-                              prefixIcon: Icon(Icons.chat_outlined),
+                              hintText: '+44 1234567890',
+                              prefixIcon: const Icon(Icons.chat_outlined),
+                              errorStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: ScreenUnitUtil.getFontSize(12),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                  width: 2,
+                                ),
+                              ),
                             ),
-                            onChanged: viewModel.updateStep1WhatsappNo,
+                            inputFormatters: [
+                              PhoneNumberFormatter(),
+                              LengthLimitingTextInputFormatter(20),
+                            ],
+                            onTap: () {
+                              // If field is empty, set +44 when user taps
+                              if (_whatsappNoController.text.isEmpty) {
+                                _whatsappNoController.text = '+44 ';
+                                _whatsappNoController
+                                    .selection = TextSelection.fromPosition(
+                                  TextPosition(
+                                    offset: _whatsappNoController.text.length,
+                                  ),
+                                );
+                              }
+                            },
+                            onChanged: (value) {
+                              viewModel.updateStep1WhatsappNo(value);
+                            },
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                // Remove spaces, dashes, and parentheses for validation
+                                final cleaned = value.replaceAll(
+                                  RegExp(r'[\s\-\(\)]'),
+                                  '',
+                                );
+                                // Should start with + and country code
+                                if (!cleaned.startsWith('+'))
+                                  return 'WhatsApp number must start with country code (e.g., +44)';
+                                // Check if it contains only digits and + at start
+                                if (!RegExp(r'^\+\d+$').hasMatch(cleaned))
+                                  return 'WhatsApp number must contain only digits after the country code';
+                                // Extract country code and number
+                                final match = RegExp(
+                                  r'^\+\d{1,3}(.+)$',
+                                ).firstMatch(cleaned);
+                                if (match == null)
+                                  return 'WhatsApp number must have a valid country code and number';
+                                final numberPart = match.group(1) ?? '';
+                                // Check if number part has valid length (minimum 7 digits)
+                                if (numberPart.length < 7)
+                                  return 'WhatsApp number must be at least 7 digits after country code';
+                                // Check if total length is maximum 15 digits (country code + number)
+                                if (cleaned.length > 15)
+                                  return 'WhatsApp number including country code must be maximum 15 digits (currently ${cleaned.length} digits)';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -992,9 +1507,111 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: 'Address',
                               prefixIcon: Icon(Icons.home_outlined),
                             ),
-                            maxLines: 2,
+                            minLines: 1,
+                            maxLines:
+                                null, // Allow unlimited lines to show complete address
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.newline,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(500),
+                            ],
                             onChanged: viewModel.updateStep1Address,
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (value.length > 500)
+                                  return 'Address must be maximum 500 characters';
+                                if (value.trim().isEmpty)
+                                  return 'Address cannot be only spaces';
+                              }
+                              return null;
+                            },
                           ),
+                          SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+
+                          // Mark Location on Map Button
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final result = await Navigator.pushNamed(
+                                context,
+                                RouteNames.addressPicker,
+                                arguments: {
+                                  'latitude': viewModel.step1Model.latitude,
+                                  'longitude': viewModel.step1Model.longitude,
+                                },
+                              );
+                              if (result != null &&
+                                  result is Map<String, dynamic>) {
+                                final latitude = result['latitude'] as double?;
+                                final longitude =
+                                    result['longitude'] as double?;
+                                final address = result['address'] as String?;
+
+                                if (latitude != null && longitude != null) {
+                                  viewModel.updateStep1Location(
+                                    latitude,
+                                    longitude,
+                                  );
+                                }
+
+                                // Save address if available and show in address field
+                                if (address != null && address.isNotEmpty) {
+                                  _addressController.text = address;
+                                  viewModel.updateStep1Address(address);
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.map_outlined),
+                            label: const Text('Mark Your Location on Map'),
+                            style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                vertical: ScreenUnitUtil.getSpacing(12),
+                                horizontal: ScreenUnitUtil.getSpacing(16),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+
+                          // Display selected location coordinates
+                          if (viewModel.step1Model.latitude != null &&
+                              viewModel.step1Model.longitude != null)
+                            Container(
+                              padding: EdgeInsets.all(
+                                ScreenUnitUtil.getSpacing(12),
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    size: ScreenUnitUtil.getFontSize(20),
+                                  ),
+                                  SizedBox(width: ScreenUnitUtil.getSpacing(8)),
+                                  Expanded(
+                                    child: Text(
+                                      'Location is saved',
+                                      style: TextStyle(
+                                        fontSize: ScreenUnitUtil.getFontSize(
+                                          12,
+                                        ),
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
                           // Post Code (API + Loader)
@@ -1002,18 +1619,41 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             controller: _postCodeController,
                             decoration: InputDecoration(
                               labelText: 'Post Code',
-                              prefixIcon: const Icon(Icons.location_on_outlined),
+                              hintText: 'SW1A 1AA',
+                              prefixIcon: const Icon(
+                                Icons.location_on_outlined,
+                              ),
                               suffixIcon: viewModel.isPostcodeLoading
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : null,
                             ),
+                            textCapitalization: TextCapitalization.characters,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(10),
+                            ],
                             onChanged: (value) {
-                              viewModel.fetchPostcodeData(value); // ✅ Debounced API call
+                              viewModel.fetchPostcodeData(
+                                value,
+                              ); // ✅ Debounced API call
                               viewModel.updateStep1PostCode(value);
+                            },
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                // UK postcode format validation
+                                final ukPostcodePattern = RegExp(
+                                  r'^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$',
+                                  caseSensitive: false,
+                                );
+                                if (!ukPostcodePattern.hasMatch(value.trim()))
+                                  return 'Please enter a valid UK postcode';
+                              }
+                              return null;
                             },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
@@ -1025,7 +1665,10 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             decoration: const InputDecoration(
                               labelText: 'Country',
                               prefixIcon: Icon(Icons.public_outlined),
-                              suffixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                              suffixIcon: Icon(
+                                Icons.lock_outline,
+                                color: Colors.grey,
+                              ),
                             ),
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
@@ -1037,19 +1680,26 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             decoration: const InputDecoration(
                               labelText: 'Region',
                               prefixIcon: Icon(Icons.map_outlined),
-                              suffixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                              suffixIcon: Icon(
+                                Icons.lock_outline,
+                                color: Colors.grey,
+                              ),
                             ),
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                          // District (editable)
+                          // District (read-only)
                           TextFormField(
                             controller: _districtController,
+                            enabled: false,
                             decoration: const InputDecoration(
                               labelText: 'District',
                               prefixIcon: Icon(Icons.location_city_outlined),
+                              suffixIcon: Icon(
+                                Icons.lock_outline,
+                                color: Colors.grey,
+                              ),
                             ),
-                            onChanged: viewModel.updateStep1District,
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1060,7 +1710,19 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: 'City',
                               prefixIcon: Icon(Icons.location_city_outlined),
                             ),
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(100),
+                            ],
                             onChanged: viewModel.updateStep1City,
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (value.length > 100)
+                                  return 'City must be maximum 100 characters';
+                                if (value.trim().isEmpty)
+                                  return 'City cannot be only spaces';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1069,9 +1731,28 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             controller: _natInsuranceNoController,
                             decoration: const InputDecoration(
                               labelText: 'National Insurance Number',
+                              hintText: 'AB123456C',
                               prefixIcon: Icon(Icons.security_outlined),
                             ),
+                            textCapitalization: TextCapitalization.characters,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(13),
+                            ],
                             onChanged: viewModel.updateStep1NatInsuranceNo,
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                // UK National Insurance format: 2 letters, 6 digits, 1 letter
+                                final niPattern = RegExp(
+                                  r'^[A-Z]{2}[0-9]{6}[A-Z]{1}$',
+                                  caseSensitive: false,
+                                );
+                                if (!niPattern.hasMatch(
+                                  value.replaceAll(' ', ''),
+                                ))
+                                  return 'Please enter a valid NI number (e.g., AB123456C)';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1082,7 +1763,19 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: 'Nationality',
                               prefixIcon: Icon(Icons.flag_outlined),
                             ),
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(100),
+                            ],
                             onChanged: viewModel.updateStep1Nationality,
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (value.length > 100)
+                                  return 'Nationality must be maximum 100 characters';
+                                if (value.trim().isEmpty)
+                                  return 'Nationality cannot be only spaces';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1101,9 +1794,23 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: 'Gender',
                               prefixIcon: Icon(Icons.person_outline),
                             ),
-                            items: const ['male', 'female', 'other', 'prefer_not_to_say']
-                                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-                                .toList(),
+                            items:
+                                const [
+                                      {'value': 'male', 'label': 'Male'},
+                                      {'value': 'female', 'label': 'Female'},
+                                      {'value': 'other', 'label': 'Other'},
+                                      {
+                                        'value': 'prefer_not_to_say',
+                                        'label': 'Prefer not to say',
+                                      },
+                                    ]
+                                    .map(
+                                      (g) => DropdownMenuItem(
+                                        value: g['value'],
+                                        child: Text(g['label']!),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: viewModel.updateStep1Gender,
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
@@ -1115,9 +1822,27 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: 'Marital Status',
                               prefixIcon: Icon(Icons.family_restroom_outlined),
                             ),
-                            items: const ['single', 'married', 'divorced', 'widowed', 'prefer_not_to_say']
-                                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                                .toList(),
+                            items:
+                                const [
+                                      {'value': 'single', 'label': 'Single'},
+                                      {'value': 'married', 'label': 'Married'},
+                                      {
+                                        'value': 'divorced',
+                                        'label': 'Divorced',
+                                      },
+                                      {'value': 'widowed', 'label': 'Widowed'},
+                                      {
+                                        'value': 'prefer_not_to_say',
+                                        'label': 'Prefer not to say',
+                                      },
+                                    ]
+                                    .map(
+                                      (s) => DropdownMenuItem(
+                                        value: s['value'],
+                                        child: Text(s['label']!),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: viewModel.updateStep1MaritalStatus,
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
@@ -1143,11 +1868,17 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                   context: context,
                                   initialDate: DateTime.now(),
                                   firstDate: DateTime.now(),
-                                  lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365 * 10),
+                                  ),
                                 );
                                 if (date != null) {
-                                  _workPermitExpiryController.text = DateFormat('yyyy-MM-dd').format(date);
-                                  viewModel.updateStep1WorkPermitExpiry(_workPermitExpiryController.text);
+                                  _workPermitExpiryController.text = DateFormat(
+                                    'yyyy-MM-dd',
+                                  ).format(date);
+                                  viewModel.updateStep1WorkPermitExpiry(
+                                    _workPermitExpiryController.text,
+                                  );
                                 }
                               },
                             ),
@@ -1165,9 +1896,13 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ),
                             onChanged: (value) {
                               if (value.isNotEmpty) {
-                                viewModel.updateStep1StudentVisaHoursPerWeek(int.tryParse(value));
+                                viewModel.updateStep1StudentVisaHoursPerWeek(
+                                  int.tryParse(value),
+                                );
                               } else {
-                                viewModel.updateStep1StudentVisaHoursPerWeek(null);
+                                viewModel.updateStep1StudentVisaHoursPerWeek(
+                                  null,
+                                );
                               }
                             },
                           ),
@@ -1180,9 +1915,19 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: 'Preferred Contact Method',
                               prefixIcon: Icon(Icons.contact_mail_outlined),
                             ),
-                            items: const ['email', 'sms', 'both']
-                                .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                                .toList(),
+                            items:
+                                const [
+                                      {'value': 'email', 'label': 'Email'},
+                                      {'value': 'sms', 'label': 'SMS'},
+                                      {'value': 'both', 'label': 'Both'},
+                                    ]
+                                    .map(
+                                      (m) => DropdownMenuItem(
+                                        value: m['value'],
+                                        child: Text(m['label']!),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: viewModel.updateStep1PreferContact,
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
@@ -1194,9 +1939,29 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               labelText: 'User Type',
                               prefixIcon: Icon(Icons.work_outline),
                             ),
-                            items: const ['merchandisers', 'support_staff', 'drivers', 'team_leaders']
-                                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                                .toList(),
+                            items:
+                                const [
+                                      {
+                                        'value': 'merchandisers',
+                                        'label': 'Merchandisers',
+                                      },
+                                      {
+                                        'value': 'support_staff',
+                                        'label': 'Support Staff',
+                                      },
+                                      {'value': 'drivers', 'label': 'Drivers'},
+                                      {
+                                        'value': 'team_leaders',
+                                        'label': 'Team Leaders',
+                                      },
+                                    ]
+                                    .map(
+                                      (t) => DropdownMenuItem(
+                                        value: t['value'],
+                                        child: Text(t['label']!),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: viewModel.updateStep1UserType,
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(24)),
@@ -1204,19 +1969,32 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           // Error message
                           if (viewModel.errorMessage != null)
                             Container(
-                              padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(12)),
+                              padding: EdgeInsets.all(
+                                ScreenUnitUtil.getSpacing(12),
+                              ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.errorContainer,
-                                borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.errorContainer,
+                                borderRadius: BorderRadius.circular(
+                                  ScreenUnitUtil.getSpacing(8),
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
                                   SizedBox(width: ScreenUnitUtil.getSpacing(8)),
                                   Expanded(
                                     child: Text(
                                       viewModel.errorMessage!,
-                                      style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onErrorContainer,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1227,7 +2005,8 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
 
                           PrimaryButton(
                             text: widget.isEditMode ? 'Update' : 'Next',
-                            isLoading: viewModel.isStepLoading ||
+                            isLoading:
+                                viewModel.isStepLoading ||
                                 viewModel.isLoadingProfile ||
                                 viewModel.isPostcodeLoading,
                             onPressed: () => _handleSubmit(viewModel),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/signup_viewmodel.dart';
 import '../../services/auth_service.dart';
@@ -7,6 +8,34 @@ import '../../resources/components/primary_button.dart';
 import '../../resources/components/step_indicator.dart';
 import '../../routes/route_names.dart';
 import '../../utils/toast_message.dart';
+
+/// Text input formatter for UK Sort Code (XX-XX-XX)
+class SortCodeFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    String formatted = '';
+    for (int i = 0; i < text.length && i < 6; i++) {
+      if (i == 2 || i == 4) {
+        formatted += '-';
+      }
+      formatted += text[i];
+    }
+
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 /// Step 4: Bank Details Screen
 class SignUpStep4Screen extends StatefulWidget {
@@ -22,6 +51,7 @@ class SignUpStep4Screen extends StatefulWidget {
 }
 
 class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
+  final _formKey = GlobalKey<FormState>();
   final _accountHolderController = TextEditingController();
   final _bankNameController = TextEditingController();
   final _bankTownController = TextEditingController();
@@ -64,8 +94,15 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
           if (step4Model.accountNumber != null) {
             _accountNumberController.text = step4Model.accountNumber!;
           }
-          if (step4Model.sortCode != null) {
-            _sortCodeController.text = step4Model.sortCode!;
+          if (step4Model.sortCode != null && step4Model.sortCode!.isNotEmpty) {
+            // Format sort code as XX-XX-XX for display
+            final cleaned = step4Model.sortCode!.replaceAll('-', '');
+            if (cleaned.length == 6) {
+              _sortCodeController.text =
+                  '${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4, 6)}';
+            } else {
+              _sortCodeController.text = step4Model.sortCode!;
+            }
           }
           setState(() {});
         }
@@ -103,9 +140,11 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                       horizontal: ScreenUnitUtil.getSpacing(24),
                       vertical: ScreenUnitUtil.getSpacing(16),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                   Text(
                     'Bank Details',
                     style: TextStyle(
@@ -128,11 +167,56 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                   TextFormField(
                     controller: _accountHolderController,
                     decoration: InputDecoration(
-                      labelText: 'Account Holder Name',
+                      labelText: 'Account Holder Name *',
                       hintText: 'Enter account holder name',
-                      prefixIcon: Icon(Icons.person_outline),
+                      prefixIcon: const Icon(Icons.person_outline),
+                      errorStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
                     ),
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(100),
+                    ],
                     onChanged: viewModel.updateStep4AccountHolder,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Account holder name is required';
+                      }
+                      if (value.length > 100) {
+                        return 'Account holder name must be maximum 100 characters';
+                      }
+                      if (value.trim().isEmpty) {
+                        return 'Account holder name cannot be only spaces';
+                      }
+                      // Check if it's a valid name (at least 2 characters, contains letters)
+                      if (value.trim().length < 2) {
+                        return 'Account holder name must be at least 2 characters';
+                      }
+                      if (!RegExp(r"^[a-zA-Z\s\-']+$").hasMatch(value.trim())) {
+                        return 'Account holder name can only contain letters, spaces, hyphens, and apostrophes';
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -140,11 +224,49 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                   TextFormField(
                     controller: _bankNameController,
                     decoration: InputDecoration(
-                      labelText: 'Bank Name',
+                      labelText: 'Bank Name *',
                       hintText: 'Enter bank name',
-                      prefixIcon: Icon(Icons.account_balance_outlined),
+                      prefixIcon: const Icon(Icons.account_balance_outlined),
+                      errorStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
                     ),
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(100),
+                    ],
                     onChanged: viewModel.updateStep4BankName,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Bank name is required';
+                      }
+                      if (value.length > 100) {
+                        return 'Bank name must be maximum 100 characters';
+                      }
+                      if (value.trim().isEmpty) {
+                        return 'Bank name cannot be only spaces';
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -152,11 +274,49 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                   TextFormField(
                     controller: _bankTownController,
                     decoration: InputDecoration(
-                      labelText: 'Bank Town',
+                      labelText: 'Bank Town *',
                       hintText: 'Enter bank town',
-                      prefixIcon: Icon(Icons.location_city_outlined),
+                      prefixIcon: const Icon(Icons.location_city_outlined),
+                      errorStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
                     ),
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(100),
+                    ],
                     onChanged: viewModel.updateStep4BankTown,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Bank town is required';
+                      }
+                      if (value.length > 100) {
+                        return 'Bank town must be maximum 100 characters';
+                      }
+                      if (value.trim().isEmpty) {
+                        return 'Bank town cannot be only spaces';
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -165,23 +325,108 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                     controller: _accountNumberController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: 'Account Number',
-                      hintText: 'Enter account number',
-                      prefixIcon: Icon(Icons.numbers_outlined),
+                      labelText: 'Account Number *',
+                      hintText: '8 digits (e.g., 12345678)',
+                      prefixIcon: const Icon(Icons.numbers_outlined),
+                      errorStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
                     ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(8),
+                    ],
                     onChanged: viewModel.updateStep4AccountNumber,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Account number is required';
+                      }
+                      // UK account numbers are exactly 8 digits
+                      if (value.length != 8) {
+                        return 'UK account number must be exactly 8 digits';
+                      }
+                      if (!RegExp(r'^\d{8}$').hasMatch(value)) {
+                        return 'Account number must contain only digits';
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
                   // Sort Code
                   TextFormField(
                     controller: _sortCodeController,
+                    keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: 'Sort Code',
-                      hintText: '20-00-00',
-                      prefixIcon: Icon(Icons.sort_outlined),
+                      labelText: 'Sort Code *',
+                      hintText: 'XX-XX-XX (e.g., 20-00-00)',
+                      prefixIcon: const Icon(Icons.sort_outlined),
+                      errorStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          ScreenUnitUtil.getSpacing(8),
+                        ),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
                     ),
-                    onChanged: viewModel.updateStep4SortCode,
+                    inputFormatters: [
+                      SortCodeFormatter(),
+                      LengthLimitingTextInputFormatter(8), // XX-XX-XX format
+                    ],
+                    onChanged: (value) {
+                      // Remove dashes for backend (store as 6 digits)
+                      final cleaned = value.replaceAll('-', '');
+                      viewModel.updateStep4SortCode(cleaned);
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Sort code is required';
+                      }
+                      // Remove dashes for validation
+                      final cleaned = value.replaceAll('-', '');
+                      // UK sort codes are exactly 6 digits
+                      if (cleaned.length != 6) {
+                        return 'UK sort code must be exactly 6 digits (format: XX-XX-XX)';
+                      }
+                      if (!RegExp(r'^\d{6}$').hasMatch(cleaned)) {
+                        return 'Sort code must contain only digits';
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: ScreenUnitUtil.getSpacing(24)),
 
@@ -237,6 +482,7 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                           ],
                         ),
                       ],
+                      ),
                     ),
                   ),
                 ),
@@ -249,6 +495,8 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
   }
 
   Future<void> _handleSubmit(SignUpViewModel viewModel) async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    
     final success = await viewModel.submitStep4();
     if (success && mounted) {
       if (widget.isEditMode) {
