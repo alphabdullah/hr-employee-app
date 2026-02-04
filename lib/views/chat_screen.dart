@@ -148,26 +148,26 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  trailing: group.lastMessagePreview != null
-                      ? Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: ScreenUnitUtil.getSpacing(8),
-                            vertical: ScreenUnitUtil.getSpacing(4),
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.secondary,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            group.membersCount.toString(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: ScreenUnitUtil.getFontSize(12),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                      : null,
+                  // trailing: group.lastMessagePreview != null
+                  //     ? Container(
+                  //         padding: EdgeInsets.symmetric(
+                  //           horizontal: ScreenUnitUtil.getSpacing(8),
+                  //           vertical: ScreenUnitUtil.getSpacing(4),
+                  //         ),
+                  //         decoration: BoxDecoration(
+                  //           color: AppColors.secondary,
+                  //           borderRadius: BorderRadius.circular(12),
+                  //         ),
+                  //         child: Text(
+                  //           group.membersCount.toString(),
+                  //           style: TextStyle(
+                  //             color: Colors.white,
+                  //             fontSize: ScreenUnitUtil.getFontSize(12),
+                  //             fontWeight: FontWeight.w600,
+                  //           ),
+                  //         ),
+                  //       )
+                  //     : null,
                  // In chat_screen.dart → onTap of group ListTile
 // onTap: () {
 //   Navigator.pushNamed(

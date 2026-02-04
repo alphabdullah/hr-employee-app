@@ -31,6 +31,9 @@ class RouteNames {
   static const String jobDetail = '/job-detail';
   static const String jobHistory = '/job-history';
   
+  // Earnings Route
+  static const String earnings = '/earnings';
+  
   // Address Picker Route
   static const String addressPicker = '/address-picker';
   

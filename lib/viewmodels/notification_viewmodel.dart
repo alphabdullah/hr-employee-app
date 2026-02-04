@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 import '../services/api_client.dart';
@@ -10,11 +11,80 @@ class NotificationViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _hasLoaded = false;
+  Timer? _pollingTimer;
+  bool _isPollingActive = false;
 
   List<NotificationModel> get notifications => _notifications;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
+
+  /// Start polling for new notifications (checks every 3 seconds)
+  void startPolling() {
+    if (_isPollingActive) return;
+    
+    _isPollingActive = true;
+    debugPrint('[Notifications] Starting polling for new notifications');
+    
+    // Poll immediately
+    checkForNewNotifications();
+    
+    // Then poll every 3 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
+      checkForNewNotifications();
+    });
+  }
+
+  /// Stop polling for new notifications
+  void stopPolling() {
+    if (!_isPollingActive) return;
+    
+    _isPollingActive = false;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+    debugPrint('[Notifications] Stopped polling for new notifications');
+  }
+
+  /// Check for new notifications silently (without showing loading indicator)
+  Future<void> checkForNewNotifications() async {
+    // Don't check if already loading or user not logged in
+    if (_isLoading) return;
+    
+    try {
+      final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        stopPolling();
+        return;
+      }
+
+      final response = await ApiClient.get(
+        ApiEndpoints.getNotifications,
+        token: token,
+        queryParameters: {'per_page': '15'},
+      );
+
+      if (response.isSuccess) {
+        final parsed = _parseNotifications(response.data);
+        
+        // Check if there are new notifications (compare by ID)
+        final currentIds = _notifications.map((n) => n.id).toSet();
+        final newIds = parsed.map((n) => n.id).toSet();
+        final hasNewNotifications = newIds.difference(currentIds).isNotEmpty;
+        
+        if (hasNewNotifications) {
+          debugPrint('[Notifications] New notifications detected!');
+        }
+        
+        // Update notifications list
+        _notifications = parsed;
+        _hasLoaded = true;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[Notifications] Error checking for new notifications: $e');
+      // Silently fail - don't show error for background checks
+    }
+  }
 
   /// Load notifications
   Future<void> loadNotifications({bool forceRefresh = false}) async {
@@ -157,20 +227,19 @@ class NotificationViewModel extends ChangeNotifier {
   List<NotificationModel> _parseNotifications(Map<String, dynamic> data) {
     List<dynamic>? rawList;
 
-    // Try different possible response structures
-    // Structure 1: { "notifications": [...] }
+    // New API structure: { "notifications": [...], "pagination": {...} }
     if (data.containsKey('notifications') && data['notifications'] is List) {
       rawList = data['notifications'] as List<dynamic>?;
       debugPrint('[Notifications API] Found notifications in "notifications" key');
     }
-    // Structure 2: { "data": [...] } (Laravel pagination)
+    // Fallback: Try "data" key (for backward compatibility)
     else if (data.containsKey('data')) {
       final nestedData = data['data'];
       if (nestedData is List) {
         rawList = nestedData;
         debugPrint('[Notifications API] Found notifications in "data" key (direct list)');
       } 
-      // Structure 3: { "data": { "data": [...] } } (nested pagination)
+      // Nested pagination structure
       else if (nestedData is Map && nestedData.containsKey('data') && nestedData['data'] is List) {
         rawList = nestedData['data'] as List<dynamic>?;
         debugPrint('[Notifications API] Found notifications in "data.data" key');

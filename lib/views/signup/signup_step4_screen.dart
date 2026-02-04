@@ -256,22 +256,16 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
         Navigator.pop(context, true);
         ToastMessage.showSuccess('Bank details updated successfully!', context);
       } else {
-        // In registration mode, check if user is logged in
-        // If logged in (completing registration after login), go to home
-        // If not logged in (new registration), go back to login
-        final token = await AuthService.getToken();
-        if (token != null && token.isNotEmpty) {
-          // User is logged in - navigate to home
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            RouteNames.login,
-            (route) => false,
-          );
-          ToastMessage.showSuccess('Registration completed successfully!', context);
-        } else {
-          // New registration - go back to login
-          Navigator.of(context).popUntil((route) => route.isFirst);
-          ToastMessage.showSuccess('Account created successfully! Please login.', context);
-        }
+        // In registration mode - clear all shared preferences before navigating to login
+        // This ensures that when app restarts, user will be taken to login screen
+        await AuthService.clearAll();
+        
+        // Navigate to login screen and clear navigation stack
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          RouteNames.login,
+          (route) => false,
+        );
+        ToastMessage.showSuccess('Registration completed successfully! Please login.', context);
       }
     } else if (mounted && viewModel.errorMessage != null) {
       ToastMessage.showError(viewModel.errorMessage!, context);

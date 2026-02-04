@@ -164,20 +164,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
       ),
       confirmDismiss: (direction) async {
-        // Mark as read via API
+        // Mark as read via API (don't navigate)
         await viewModel.markAsRead(notification.id);
-        // Navigate to job detail if job_id is available
-        if (notification.jobId != null && mounted) {
-          final jobViewModel = context.read<JobViewModel>();
-          final job = jobViewModel.getJobById(notification.jobId!);
-          if (job != null && mounted) {
-            AppRouter.pushNamed(
-              context,
-              RouteNames.jobDetail,
-              arguments: job,
-            );
-          }
-        }
         // Return false to prevent dismissal (keep notification in list)
         return false;
       },
@@ -186,6 +174,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
           if (!notification.isRead) {
             viewModel.markAsRead(notification.id);
           }
+          // Navigate to job detail or chat based on notification type
+          _handleNotificationTap(context, notification);
         },
         child: Container(
           padding: EdgeInsets.symmetric(
@@ -285,12 +275,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Color _getNotificationColor(String? type) {
     switch (type) {
-      case 'job':
+      case 'job_assigned':
+      case 'job_complete':
         return AppColors.secondary;
-      case 'message':
-        return AppColors.darkPrimary;
-      case 'system':
+      case 'hours_changed':
         return AppColors.accent;
+      case 'chat_message':
+        return AppColors.darkPrimary;
       default:
         return AppColors.textSecondary;
     }
@@ -298,12 +289,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   IconData _getNotificationIcon(String? type) {
     switch (type) {
-      case 'job':
+      case 'job_assigned':
         return Icons.work_outline;
-      case 'message':
+      case 'job_complete':
+        return Icons.check_circle_outline;
+      case 'hours_changed':
+        return Icons.access_time;
+      case 'chat_message':
         return Icons.chat_bubble_outline;
-      case 'system':
-        return Icons.info_outline;
       default:
         return Icons.notifications_outlined;
     }
@@ -325,6 +318,45 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return '${difference.inDays}d ago';
     } else {
       return DateFormat('MMM d, yyyy').format(timestamp);
+    }
+  }
+
+  void _handleNotificationTap(BuildContext context, NotificationModel notification) {
+    // Navigate based on notification type
+    switch (notification.type) {
+      case 'job_assigned':
+      case 'job_complete':
+      case 'hours_changed':
+        // Navigate to job detail if schedule_job_id is available
+        if (notification.scheduleJobId != null) {
+          final jobViewModel = context.read<JobViewModel>();
+          // Try to find job by schedule_job_id or job_id
+          final job = jobViewModel.getJobById(notification.scheduleJobId.toString());
+          if (job != null) {
+            AppRouter.pushNamed(
+              context,
+              RouteNames.jobDetail,
+              arguments: job,
+            );
+          }
+        }
+        break;
+      case 'chat_message':
+        // Navigate to chat detail if chat_group_id is available
+        if (notification.chatGroupId != null) {
+          AppRouter.pushNamed(
+            context,
+            RouteNames.chatDetail,
+            arguments: {
+              'groupId': notification.chatGroupId!,
+              'groupName': notification.chatGroupName ?? 'Group Chat',
+            },
+          );
+        }
+        break;
+      default:
+        // No navigation for unknown types
+        break;
     }
   }
 }

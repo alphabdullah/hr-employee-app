@@ -37,6 +37,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       // Start loading messages
       _viewModel.loadGroupMessages().then((_) {
         _scrollToBottom();
+        // Start polling for new messages
+        _viewModel.startPolling();
       });
     });
   }
@@ -44,7 +46,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _viewModel.dispose(); // important: clean up the viewmodel
+    _viewModel.dispose(); // important: clean up the viewmodel (this will stop polling)
     super.dispose();
   }
 

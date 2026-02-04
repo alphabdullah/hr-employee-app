@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
 import '../viewmodels/settings_viewmodel.dart';
+import '../viewmodels/notification_viewmodel.dart';
 import 'home_screen.dart';
 import 'chat_screen.dart';
 // import 'availability_shortcut_screen.dart';
@@ -16,8 +18,44 @@ class MainTabScreen extends StatefulWidget {
   State<MainTabScreen> createState() => _MainTabScreenState();
 }
 
-class _MainTabScreenState extends State<MainTabScreen> {
+class _MainTabScreenState extends State<MainTabScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Start polling for notifications when app starts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notificationViewModel = context.read<NotificationViewModel>();
+      notificationViewModel.loadNotifications();
+      notificationViewModel.startPolling();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    final notificationViewModel = context.read<NotificationViewModel>();
+    
+    if (state == AppLifecycleState.resumed) {
+      // App came to foreground - refresh notifications
+      debugPrint('[MainTabScreen] App resumed - refreshing notifications');
+      notificationViewModel.loadNotifications(forceRefresh: true);
+      notificationViewModel.startPolling();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // App went to background - stop polling to save battery
+      debugPrint('[MainTabScreen] App paused - stopping notification polling');
+      notificationViewModel.stopPolling();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -13,6 +13,7 @@ import '../views/forgot_password_screen.dart';
 import '../views/main_tab_screen.dart';
 import '../views/job_detail_screen.dart';
 import '../views/job_history_screen.dart';
+import '../views/earnings_screen.dart';
 import '../views/address_picker_screen.dart';
 import '../views/profile_edit_screen.dart';
 import '../views/pending_profile_landing_screen.dart';
@@ -120,6 +121,12 @@ class AppRouter {
       case RouteNames.jobHistory:
         return MaterialPageRoute(
           builder: (_) => const JobHistoryScreen(),
+          settings: settings,
+        );
+
+      case RouteNames.earnings:
+        return MaterialPageRoute(
+          builder: (_) => const EarningsScreen(),
           settings: settings,
         );
 

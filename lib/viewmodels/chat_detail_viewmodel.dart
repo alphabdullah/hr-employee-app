@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/message_model.dart';
@@ -15,6 +16,8 @@ class ChatDetailViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _hasLoadedMessages = false;
+  Timer? _pollingTimer;
+  bool _isPollingActive = false;
   final TextEditingController messageController = TextEditingController();
 
   List<MessageModel> get messages => _messages;
@@ -26,8 +29,82 @@ class ChatDetailViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    stopPolling();
     messageController.dispose();
     super.dispose();
+  }
+
+  /// Start polling for new messages (checks every 3 seconds)
+  void startPolling() {
+    if (_isPollingActive) return;
+    
+    _isPollingActive = true;
+    debugPrint('[ChatDetail] Starting polling for new messages in group $groupId');
+    
+    // Poll immediately
+    checkForNewMessages();
+    
+    // Then poll every 3 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      checkForNewMessages();
+    });
+  }
+
+  /// Stop polling for new messages
+  void stopPolling() {
+    if (!_isPollingActive) return;
+    
+    _isPollingActive = false;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+    debugPrint('[ChatDetail] Stopped polling for new messages in group $groupId');
+  }
+
+  /// Check for new messages silently (without showing loading indicator)
+  Future<void> checkForNewMessages() async {
+    // Don't check if already loading or user not logged in
+    if (_isLoading) return;
+    
+    try {
+      final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        stopPolling();
+        return;
+      }
+
+      final response = await ApiClient.get(
+        ApiEndpoints.getGroupChatMessages(groupId),
+        queryParameters: {'per_page': '50'},
+        token: token,
+      );
+
+      if (response.isSuccess) {
+        final messagesList = response.getList<Map<String, dynamic>>('messages') ?? [];
+        final currentUserId = await AuthService.getEmployeeId() ?? '';
+
+        final updated = messagesList.map((json) {
+          return MessageModel.fromJson(json, currentUserId: currentUserId);
+        }).toList();
+
+        updated.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+        // Check if there are new messages (compare by ID)
+        final currentIds = _messages.map((m) => m.id).toSet();
+        final newIds = updated.map((m) => m.id).toSet();
+        final hasNewMessages = newIds.difference(currentIds).isNotEmpty;
+        
+        if (hasNewMessages) {
+          debugPrint('[ChatDetail] New messages detected in group $groupId');
+        }
+
+        // Update messages list
+        _messages = updated;
+        await CacheService.saveChatMessages(groupId, messagesList);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[ChatDetail] Error checking for new messages: $e');
+    }
   }
 
   /// Load group messages from the new endpoint

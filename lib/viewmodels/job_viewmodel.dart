@@ -278,7 +278,6 @@ class JobViewModel extends ChangeNotifier {
   List<JobModel> get allJobs => _jobs;
 
   /// Check in (punch in) for active job
-/// Check in (punch in) for active job
   Future<bool> checkIn({String? jobId}) async {
     final activeJobApp = jobId != null ? getApplicationDataForJob(jobId) : activeJob;
 
@@ -293,10 +292,23 @@ class JobViewModel extends ChangeNotifier {
 
     try {
       final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        _errorMessage = 'Authentication required. Please login again.';
+        _isCheckingIn = false;
+        notifyListeners();
+        return false;
+      }
+
       final endpoint = ApiEndpoints.punchIn(activeJobApp.job.id);
       
-      // Get device location
-      Position position = await Geolocator.getCurrentPosition();
+      // Get device location with proper permission handling
+      final position = await _resolveDeviceLocation();
+      if (position == null) {
+        _errorMessage = 'Location access is required to punch in. Please enable location services and grant permission.';
+        _isCheckingIn = false;
+        notifyListeners();
+        return false;
+      }
       
       // Request body as requested: { "lat": ..., "lng": ... }
       final body = {
@@ -314,17 +326,21 @@ class JobViewModel extends ChangeNotifier {
         _isCheckedIn = true;
         // Refresh data in background without showing loading indicator
         _refreshMyJobsInBackground().then((_) => fetchAttendance(silent: true));
+        _isCheckingIn = false;
+        notifyListeners();
         return true;
       } else {
         _errorMessage = response.message;
+        _isCheckingIn = false;
+        notifyListeners();
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Location access is required to punch in.';
-      return false;
-    } finally {
+      debugPrint('Check-in error: $e');
+      _errorMessage = 'Failed to check in. Please ensure location services are enabled and try again.';
       _isCheckingIn = false;
       notifyListeners();
+      return false;
     }
   }
 
@@ -343,9 +359,23 @@ class JobViewModel extends ChangeNotifier {
 
     try {
       final token = await AuthService.getToken();
+      if (token == null || token.isEmpty) {
+        _errorMessage = 'Authentication required. Please login again.';
+        _isCheckingOut = false;
+        notifyListeners();
+        return false;
+      }
+
       final endpoint = ApiEndpoints.punchOut(activeJobApp.job.id);
       
-      Position position = await Geolocator.getCurrentPosition();
+      // Get device location with proper permission handling
+      final position = await _resolveDeviceLocation();
+      if (position == null) {
+        _errorMessage = 'Location access is required to punch out. Please enable location services and grant permission.';
+        _isCheckingOut = false;
+        notifyListeners();
+        return false;
+      }
       
       final body = {
         "lat": position.latitude,
@@ -362,38 +392,62 @@ class JobViewModel extends ChangeNotifier {
         _isCheckedIn = false;
         // Refresh data in background without showing loading indicator
         _refreshMyJobsInBackground().then((_) => fetchAttendance(silent: true));
+        _isCheckingOut = false;
+        notifyListeners();
         return true;
       } else {
         _errorMessage = response.message;
+        _isCheckingOut = false;
+        notifyListeners();
         return false;
       }
     } catch (e) {
-      _errorMessage = 'Location access is required to punch out.';
-      return false;
-    } finally {
+      debugPrint('Check-out error: $e');
+      _errorMessage = 'Failed to check out. Please ensure location services are enabled and try again.';
       _isCheckingOut = false;
       notifyListeners();
+      return false;
     }
   }
 
   Future<Position?> _resolveDeviceLocation() async {
     try {
+      // Check if location services are enabled
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (!serviceEnabled) {
+        debugPrint('[Location] Location services are disabled');
         return null;
       }
 
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
+      // Check current permission status
+      var permission = await Geolocator.checkPermission();
+      debugPrint('[Location] Current permission: $permission');
+
+      // Request permission if denied
+      if (permission == LocationPermission.denied) {
+        debugPrint('[Location] Permission denied, requesting...');
+        permission = await Geolocator.requestPermission();
+        debugPrint('[Location] Permission after request: $permission');
+      }
+
+      // Check if permission is still denied
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        debugPrint('[Location] Permission denied or denied forever');
+        return null;
+      }
+
+      // Get current position
+      debugPrint('[Location] Getting current position...');
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
       );
+      debugPrint('[Location] Position obtained: ${position.latitude}, ${position.longitude}');
+      return position;
     } catch (e) {
+      debugPrint('[Location] Error getting location: $e');
       return null;
     }
   }

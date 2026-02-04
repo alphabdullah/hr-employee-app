@@ -334,6 +334,15 @@ class ApiEndpoints {
   /// **Response:** Returns attendance list with punch_in_at, punch_out_at, job details
   static const String getMyAttendance = '/api/me/attendance';
 
+  /// Get authenticated user's earnings
+  /// 
+  /// **Method:** GET
+  /// **Path:** /api/me/earnings
+  /// **Auth:** Required (Bearer token)
+  /// 
+  /// **Response:** Returns earnings data with per_job and overall totals
+  static const String getMyEarnings = '/api/me/earnings';
+
   // ============================================================================
   // SKILLS MANAGEMENT ENDPOINTS
   // ============================================================================
@@ -405,21 +414,24 @@ class ApiEndpoints {
 
   /// Get all notifications for the authenticated employee
   /// Method: GET
-  /// Path: /notifications
+  /// Path: /api/me/notifications
   /// Auth: Bearer
-  static const String getNotifications = '/notifications';
+  /// Response: Returns notifications list with pagination
+  static const String getNotifications = '/api/me/notifications';
 
   /// Mark a specific notification as read
   /// Method: POST
-  /// Path: /notifications/:id/read
+  /// Path: /api/me/notifications/:id/mark-read
   /// Auth: Bearer
-  static String markNotificationRead(String id) => '/notifications/$id/read';
+  /// Response: {"message": "Marked as read."}
+  static String markNotificationRead(String id) => '/api/me/notifications/$id/mark-read';
 
   /// Mark all notifications as read
   /// Method: POST
-  /// Path: /notifications/read-all
+  /// Path: /api/me/notifications/mark-all-read
   /// Auth: Bearer
-  static const String markAllNotificationsRead = '/notifications/read-all';
+  /// Response: {"message": "All marked as read."}
+  static const String markAllNotificationsRead = '/api/me/notifications/mark-all-read';
 
   // ============================================================================
   // HELPER METHODS

@@ -341,8 +341,8 @@ class _HomeScreenState extends State<HomeScreen>
 
         return RefreshIndicator(
           onRefresh: () async {
-            // await viewModel.loadJobs();
-            // await viewModel.loadMyApplications();
+            await viewModel.loadMyApplications(forceRefresh: true);
+            await viewModel.fetchAttendance();
           },
           child: ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -413,8 +413,8 @@ class _HomeScreenState extends State<HomeScreen>
 
         return RefreshIndicator(
           onRefresh: () async {
-            // await viewModel.loadJobs();
-            // await viewModel.loadMyApplications();
+            await viewModel.loadMyApplications(forceRefresh: true);
+            await viewModel.fetchAttendance();
           },
           child: ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),

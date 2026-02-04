@@ -50,13 +50,13 @@ class SettingsScreen extends StatelessWidget {
           //     );
           //   },
           // ),
-          Divider(
-            height: 1,
-            thickness: 1,
-            indent: ScreenUnitUtil.getSpacing(16),
-            endIndent: ScreenUnitUtil.getSpacing(16),
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-          ),
+          // Divider(
+          //   height: 1,
+          //   thickness: 1,
+          //   indent: ScreenUnitUtil.getSpacing(16),
+          //   endIndent: ScreenUnitUtil.getSpacing(16),
+          //   color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          // ),
           _buildSettingsItem(
             context: context,
             icon: Icons.edit_outlined,
@@ -85,6 +85,28 @@ class SettingsScreen extends StatelessWidget {
               AppRouter.pushNamed(
                 context,
                 RouteNames.jobHistory,
+              );
+            },
+          ),
+          
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: ScreenUnitUtil.getSpacing(16),
+            endIndent: ScreenUnitUtil.getSpacing(16),
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          ),
+          
+          // Earnings Section
+          _buildSettingsItem(
+            context: context,
+            icon: Icons.attach_money_outlined,
+            title: 'Earnings',
+            subtitle: 'View your earnings and job payments',
+            onTap: () {
+              AppRouter.pushNamed(
+                context,
+                RouteNames.earnings,
               );
             },
           ),
