@@ -23,6 +23,7 @@ class SignUpViewModel extends ChangeNotifier {
   RegisterStep3Model _step3Model = RegisterStep3Model.empty();
   RegisterStep4Model _step4Model = RegisterStep4Model.empty();
   RegisterStep5Model _step5Model = RegisterStep5Model.empty();
+  RegisterStep5P46Model _step5P46Model = RegisterStep5P46Model.empty();
 
   // Custom fields
   List<CustomFieldModel> _customFields = [];
@@ -52,6 +53,7 @@ class SignUpViewModel extends ChangeNotifier {
   RegisterStep3Model get step3Model => _step3Model;
   RegisterStep4Model get step4Model => _step4Model;
   RegisterStep5Model get step5Model => _step5Model;
+  RegisterStep5P46Model get step5P46Model => _step5P46Model;
   List<CustomFieldModel> get customFields => _customFields;
   bool get hasCustomFields => _hasCustomFields;
   bool get isLoadingCustomFields => _isLoadingCustomFields;
@@ -61,14 +63,87 @@ class SignUpViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get canGoNext {
     if (_hasCustomFields) {
-      return _currentStep < 5;
+      // Steps: 1-4 (profile, compliance, availability, bank),
+      // 5 (P46), 6 (custom fields if enabled)
+      return _currentStep < 6;
     }
-    return _currentStep < 4;
+    // Steps: 1-4 plus P46 as final step
+    return _currentStep < 5;
   }
 
   bool get canGoBack => _currentStep > 1;
   bool get declarationAgreed => _declarationAgreed;
   bool get termsConditionsAgreed => _termsConditionsAgreed;
+
+  // ---------------------------------------------------------------------------
+  // STEP 5 P46 helpers (shared setters used by Step 5 screen)
+  // ---------------------------------------------------------------------------
+
+  void updateStep5P46NatInsuranceNo(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(natInsuranceNo: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46Title(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(title: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46Surname(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(surname: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46FirstName(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(firstName: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46Gender(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(gender: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46Dob(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(dob: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46Postcode(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(postcode: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46HouseFlatNumber(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(houseFlatNumber: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46RestOfAddress(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(restOfAddress: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46OptionAbc(String? value) {
+    _step5P46Model = _step5P46Model.copyWith(optionAbc: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void updateStep5P46OptionD(bool? value) {
+    _step5P46Model = _step5P46Model.copyWith(optionD: value);
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   /// Set declaration agreement status
   void setDeclarationAgreed(bool value) {
@@ -113,7 +188,7 @@ class SignUpViewModel extends ChangeNotifier {
 
   /// Go to specific step
   void goToStep(int step) {
-    final maxStep = _hasCustomFields ? 5 : 4;
+    final maxStep = _hasCustomFields ? 6 : 5;
     if (step >= 1 && step <= maxStep) {
       _currentStep = step;
       _errorMessage = null;
@@ -840,8 +915,115 @@ class SignUpViewModel extends ChangeNotifier {
   }
 
   // ============================================================================
-  // STEP 5: Custom Fields
+  // STEP 5: P46 Tax Details & STEP 6: Custom Fields
   // ============================================================================
+
+  // ---------------------------
+  // P46 (register/step-5) data
+  // ---------------------------
+
+  /// Submit Step 5 - P46 Tax Details (Employee without a P45)
+  Future<bool> submitStep5P46() async {
+    // If in edit mode, use update method instead
+    if (_isEditMode) {
+      return await updateStep5P46();
+    }
+
+    // Use registration token if available, otherwise try auth token
+    String? tokenToUse = _registrationToken;
+    if (tokenToUse == null || tokenToUse.isEmpty) {
+      tokenToUse = await AuthService.getToken();
+      if (tokenToUse == null || tokenToUse.isEmpty) {
+        _errorMessage = 'Please complete Step 1 first or login';
+        notifyListeners();
+        return false;
+      }
+    }
+
+    _isStepLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final payload = _step5P46Model.toJson();
+      debugPrint('Submitting Step 5 (P46): $payload');
+
+      final response = await ApiClient.post(
+        ApiEndpoints.registerStep5,
+        token: tokenToUse,
+        body: payload,
+      );
+      debugPrint(
+        'Step 5 (P46) response: ${response.statusCode} ${response.data}',
+      );
+
+      _isStepLoading = false;
+
+      if (response.isSuccess) {
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.message;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isStepLoading = false;
+      _errorMessage = 'An error occurred. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Update Step 5 - P46 Tax Details (Edit Mode)
+  Future<bool> updateStep5P46() async {
+    final token = await AuthService.getToken();
+    if (token == null || token.isEmpty) {
+      _errorMessage = 'Please login to update tax details';
+      notifyListeners();
+      return false;
+    }
+
+    _isStepLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final payload = _step5P46Model.toJson();
+      debugPrint('Updating Step 5 (P46): $payload');
+
+      final response = await ApiClient.put(
+        ApiEndpoints.registerStep5,
+        token: token,
+        body: payload,
+      );
+      debugPrint(
+        'Update Step 5 (P46) response: ${response.statusCode} ${response.data}',
+      );
+
+      _isStepLoading = false;
+
+      if (response.isSuccess) {
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.message;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isStepLoading = false;
+      _errorMessage = 'An error occurred. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ---------------------------
+  // Custom fields (Profile extra)
+  // ---------------------------
 
   /// Fetch custom fields from API
   Future<void> fetchCustomFields({bool forceRefresh = false}) async {
@@ -1041,7 +1223,7 @@ class SignUpViewModel extends ChangeNotifier {
 
       // Always use multipart POST (API expects form-data)
       final response = await ApiClient.postMultipart(
-        ApiEndpoints.registerStep5,
+        ApiEndpoints.profileExtra,
         token: tokenToUse,
         fields: formFields,
         files: filesForApi,
@@ -1120,7 +1302,7 @@ class SignUpViewModel extends ChangeNotifier {
 
       // Always use multipart POST (API expects form-data, only POST is supported)
       final response = await ApiClient.postMultipart(
-        ApiEndpoints.registerStep5,
+        ApiEndpoints.profileExtra,
         token: token,
         fields: formFields,
         files: filesForApi,
@@ -1544,6 +1726,7 @@ class SignUpViewModel extends ChangeNotifier {
     _step3Model = RegisterStep3Model.empty();
     _step4Model = RegisterStep4Model.empty();
     _step5Model = RegisterStep5Model.empty();
+    _step5P46Model = RegisterStep5P46Model.empty();
     _customFields = [];
     _hasCustomFields = false;
     _isLoadingCustomFields = false;

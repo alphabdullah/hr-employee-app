@@ -415,7 +415,7 @@ class RegisterStep5Model {
   final Map<int, dynamic> customFieldValues; // Field ID -> value
 
   RegisterStep5Model({Map<int, dynamic>? customFieldValues})
-    : customFieldValues = customFieldValues ?? {};
+      : customFieldValues = customFieldValues ?? {};
 
   factory RegisterStep5Model.empty() {
     return RegisterStep5Model();
@@ -442,5 +442,114 @@ class RegisterStep5Model {
 
   dynamic getFieldValue(int fieldId) {
     return customFieldValues[fieldId];
+  }
+}
+
+/// Step 5: P46 Tax Details (Employee without a P45)
+///
+/// This model represents the data collected on the P46-style form:
+/// - National Insurance number
+/// - Name, title, gender, date of birth
+/// - Address (postcode, house/flat number, rest of address)
+/// - Present circumstances options (A/B/C)
+/// - Student loan option (D)
+class RegisterStep5P46Model {
+  final String? natInsuranceNo;
+  final String? title;
+  final String? surname;
+  final String? firstName;
+  final String? gender;
+  final String? dob; // Y-m-d
+  final String? postcode;
+  final String? houseFlatNumber;
+  final String? restOfAddress;
+  final String? optionAbc; // 'A', 'B', or 'C'
+  final bool? optionD; // true if D is checked
+
+  RegisterStep5P46Model({
+    this.natInsuranceNo,
+    this.title,
+    this.surname,
+    this.firstName,
+    this.gender,
+    this.dob,
+    this.postcode,
+    this.houseFlatNumber,
+    this.restOfAddress,
+    this.optionAbc,
+    this.optionD,
+  });
+
+  factory RegisterStep5P46Model.empty() {
+    return RegisterStep5P46Model();
+  }
+
+  RegisterStep5P46Model copyWith({
+    String? natInsuranceNo,
+    String? title,
+    String? surname,
+    String? firstName,
+    String? gender,
+    String? dob,
+    String? postcode,
+    String? houseFlatNumber,
+    String? restOfAddress,
+    String? optionAbc,
+    bool? optionD,
+  }) {
+    return RegisterStep5P46Model(
+      natInsuranceNo: natInsuranceNo ?? this.natInsuranceNo,
+      title: title ?? this.title,
+      surname: surname ?? this.surname,
+      firstName: firstName ?? this.firstName,
+      gender: gender ?? this.gender,
+      dob: dob ?? this.dob,
+      postcode: postcode ?? this.postcode,
+      houseFlatNumber: houseFlatNumber ?? this.houseFlatNumber,
+      restOfAddress: restOfAddress ?? this.restOfAddress,
+      optionAbc: optionAbc ?? this.optionAbc,
+      optionD: optionD ?? this.optionD,
+    );
+  }
+
+  /// Convert to API JSON body expected by /api/register/step-5
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> json = {};
+
+    if (natInsuranceNo != null && natInsuranceNo!.isNotEmpty) {
+      json['nat_insurance_no'] = natInsuranceNo;
+    }
+    if (title != null && title!.isNotEmpty) {
+      json['title'] = title;
+    }
+    if (surname != null && surname!.isNotEmpty) {
+      json['surname'] = surname;
+    }
+    if (firstName != null && firstName!.isNotEmpty) {
+      json['first_name'] = firstName;
+    }
+    if (gender != null && gender!.isNotEmpty) {
+      json['gender'] = gender;
+    }
+    if (dob != null && dob!.isNotEmpty) {
+      json['dob'] = dob;
+    }
+    if (postcode != null && postcode!.isNotEmpty) {
+      json['postcode'] = postcode;
+    }
+    if (houseFlatNumber != null && houseFlatNumber!.isNotEmpty) {
+      json['house_flat_number'] = houseFlatNumber;
+    }
+    if (restOfAddress != null && restOfAddress!.isNotEmpty) {
+      json['rest_of_address'] = restOfAddress;
+    }
+    if (optionAbc != null && optionAbc!.isNotEmpty) {
+      json['option_abc'] = optionAbc;
+    }
+    if (optionD != null) {
+      json['option_d'] = optionD;
+    }
+
+    return json;
   }
 }

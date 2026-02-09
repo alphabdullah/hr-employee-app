@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+
 import '../../viewmodels/signup_viewmodel.dart';
-import '../../models/register_flow_models.dart';
+import '../../services/auth_service.dart';
 import '../../utils/screen_unit_util.dart';
 import '../../resources/components/primary_button.dart';
 import '../../resources/components/step_indicator.dart';
 import '../../routes/route_names.dart';
 import '../../utils/toast_message.dart';
-import '../../services/auth_service.dart';
 
-/// Step 5: Custom Fields Screen
+/// Step 5: P46 Tax Details Screen
 class SignUpStep5Screen extends StatefulWidget {
   final bool isEditMode;
 
@@ -24,300 +22,87 @@ class SignUpStep5Screen extends StatefulWidget {
 
 class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
   final _formKey = GlobalKey<FormState>();
-  final Map<int, TextEditingController> _controllers =
-      {}; // Field ID -> Controller
-  final Map<int, dynamic> _fieldValues = {}; // Field ID -> Value
-  final Map<int, File?> _documentFiles = {}; // Field ID -> File
 
-  @override
-  void dispose() {
-    // Dispose all controllers
-    for (var controller in _controllers.values) {
-      controller.dispose();
-    }
-    _controllers.clear();
-    super.dispose();
-  }
+  final _niController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _surnameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _postcodeController = TextEditingController();
+  final _houseFlatController = TextEditingController();
+  final _restOfAddressController = TextEditingController();
+
+  String? _selectedGender;
+  String? _selectedOptionAbc;
+  bool _optionD = false;
+  bool _confirmCorrect = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final viewModel = context.read<SignUpViewModel>();
       viewModel.goToStep(5);
       viewModel.setEditMode(widget.isEditMode);
 
-      // If custom fields are already loaded, use them; otherwise fetch
-      if (viewModel.customFields.isNotEmpty) {
-        debugPrint(
-          'Step 5: Using existing custom fields (${viewModel.customFields.length})',
-        );
-        _initializeFields(viewModel);
-      } else {
-        debugPrint('Step 5: Fetching custom fields...');
-        // Fetch custom fields
-        viewModel.fetchCustomFields().then((_) {
-          if (mounted) {
-            debugPrint(
-              'Step 5: Custom fields fetched, count: ${viewModel.customFields.length}',
-            );
-            _initializeFields(viewModel);
-          }
-        });
-      }
+      // Ensure profile data is loaded so we can pre-fill common fields
+      await viewModel.loadProfileData();
+      _prefillFromModels(viewModel);
     });
   }
 
-  void _initializeFields(SignUpViewModel viewModel) {
-    // Create controllers for each custom field
-    // Only supports 'text' and 'document' types
-    for (var field in viewModel.customFields) {
-      if (field.type.toLowerCase() == 'document') {
-        // For document type, initialize file as null
-        _documentFiles[field.id] = null;
-      } else {
-        // For text type (or any other type defaults to text)
-        _controllers[field.id] = TextEditingController();
+  void _prefillFromModels(SignUpViewModel viewModel) {
+    final step1 = viewModel.step1Model;
+    final p46 = viewModel.step5P46Model;
 
-        // Load existing value if in edit mode
-        if (widget.isEditMode) {
-          final existingValue = viewModel.step5Model.getFieldValue(field.id);
-          if (existingValue != null) {
-            _controllers[field.id]!.text = existingValue.toString();
-            _fieldValues[field.id] = existingValue;
-          }
-        }
-      }
-    }
+    _niController.text = p46.natInsuranceNo ?? step1.natInsuranceNo ?? '';
+    _titleController.text = p46.title ?? '';
+    _surnameController.text = p46.surname ?? step1.surname;
+    _firstNameController.text = p46.firstName ?? step1.name;
+    _dobController.text = (p46.dob ?? step1.dob ?? '').toString();
+    _postcodeController.text = p46.postcode ?? step1.postCode ?? '';
+    _houseFlatController.text = p46.houseFlatNumber ?? '';
+    _restOfAddressController.text = p46.restOfAddress ?? step1.address ?? '';
+
+    _selectedGender = p46.gender ?? step1.gender;
+    _selectedOptionAbc = p46.optionAbc;
+    _optionD = p46.optionD ?? false;
+
     setState(() {});
   }
 
-  Widget _buildField(CustomFieldModel field) {
-    switch (field.type.toLowerCase()) {
-      case 'text':
-      case 'textarea':
-        return _buildTextField(field);
-      case 'document':
-        return _buildDocumentField(field);
-      default:
-        // Default to text field for any unknown types
-        return _buildTextField(field);
-    }
+  @override
+  void dispose() {
+    _niController.dispose();
+    _titleController.dispose();
+    _surnameController.dispose();
+    _firstNameController.dispose();
+    _dobController.dispose();
+    _postcodeController.dispose();
+    _houseFlatController.dispose();
+    _restOfAddressController.dispose();
+    super.dispose();
   }
 
-  Widget _buildTextField(CustomFieldModel field) {
-    final controller = _controllers[field.id] ?? TextEditingController();
-    if (!_controllers.containsKey(field.id)) {
-      _controllers[field.id] = controller;
+  Future<void> _pickDob(SignUpViewModel viewModel) async {
+    final now = DateTime.now();
+    final initialDate = DateTime(now.year - 25, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+    if (picked != null) {
+      final formatted = '${picked.year.toString().padLeft(4, '0')}-'
+          '${picked.month.toString().padLeft(2, '0')}-'
+          '${picked.day.toString().padLeft(2, '0')}';
+      _dobController.text = formatted;
+
+      viewModel.updateStep5P46Dob(formatted);
+      viewModel.updateStep1Dob(formatted);
+      setState(() {});
     }
-
-    return TextFormField(
-      controller: controller,
-      maxLines: field.type.toLowerCase() == 'textarea' ? 4 : 1,
-      maxLength: field.maxLength,
-      decoration: InputDecoration(
-        labelText: field.label,
-        hintText: field.placeholder,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
-        ),
-        errorStyle: TextStyle(
-          color: Colors.red,
-          fontSize: ScreenUnitUtil.getFontSize(12),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-      ),
-      validator: (value) {
-        if (field.isRequired && (value == null || value.trim().isEmpty)) {
-          return '${field.label} is required';
-        }
-        if (field.maxLength != null &&
-            value != null &&
-            value.length > field.maxLength!) {
-          return 'Maximum ${field.maxLength} characters allowed';
-        }
-        return null;
-      },
-      onChanged: (value) {
-        _fieldValues[field.id] = value;
-        context.read<SignUpViewModel>().updateStep5Field(field.id, value);
-      },
-    );
-  }
-
-  Widget _buildDocumentField(CustomFieldModel field) {
-    final file = _documentFiles[field.id];
-    final maxSizeMb = field.maxFileSizeMb ?? 20;
-
-    return FormField<File>(
-      initialValue: file,
-      validator: (val) {
-        if (field.isRequired && val == null) {
-          return '${field.label} is required';
-        }
-        if (val != null) {
-          final fileSizeMb = val.lengthSync() / (1024 * 1024);
-          if (fileSizeMb > maxSizeMb) {
-            return 'File size must be less than ${maxSizeMb}MB';
-          }
-        }
-        return null;
-      },
-      builder: (formFieldState) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              field.label + (field.isRequired ? ' *' : ''),
-              style: TextStyle(
-                fontSize: ScreenUnitUtil.getFontSize(16),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-            if (file != null)
-              Container(
-                padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(12)),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(
-                    ScreenUnitUtil.getSpacing(8),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.description, color: Colors.blue),
-                    SizedBox(width: ScreenUnitUtil.getSpacing(8)),
-                    Expanded(
-                      child: Text(
-                        file.path.split('/').last,
-                        style: TextStyle(
-                          fontSize: ScreenUnitUtil.getFontSize(14),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: Colors.red),
-                      onPressed: () {
-                        _documentFiles[field.id] = null;
-                        _fieldValues[field.id] = null;
-                        context.read<SignUpViewModel>().updateStep5Field(
-                          field.id,
-                          null,
-                        );
-                        formFieldState.didChange(null);
-                        setState(() {});
-                      },
-                    ),
-                  ],
-                ),
-              )
-            else
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final ImagePicker picker = ImagePicker();
-                  try {
-                    // Show options: Camera or Gallery
-                    final source = await showDialog<ImageSource>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Select Source'),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(
-                              leading: Icon(Icons.camera_alt),
-                              title: Text('Camera'),
-                              onTap: () =>
-                                  Navigator.pop(context, ImageSource.camera),
-                            ),
-                            ListTile(
-                              leading: Icon(Icons.photo_library),
-                              title: Text('Gallery'),
-                              onTap: () =>
-                                  Navigator.pop(context, ImageSource.gallery),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-
-                    if (source != null) {
-                      final pickedFile = await picker.pickImage(source: source);
-                      if (pickedFile != null) {
-                        final file = File(pickedFile.path);
-                        final fileSizeMb = file.lengthSync() / (1024 * 1024);
-
-                        if (fileSizeMb > maxSizeMb) {
-                          if (mounted) {
-                            ToastMessage.showError(
-                              'File size must be less than ${maxSizeMb}MB',
-                              context,
-                            );
-                          }
-                          return;
-                        }
-
-                        _documentFiles[field.id] = file;
-                        _fieldValues[field.id] =
-                            file.path; // Store file path temporarily
-                        context.read<SignUpViewModel>().updateStep5Field(
-                          field.id,
-                          file.path,
-                        );
-                        formFieldState.didChange(file);
-                        setState(() {});
-                      }
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ToastMessage.showError(
-                        'Failed to pick image: ${e.toString()}',
-                        context,
-                      );
-                    }
-                  }
-                },
-                icon: Icon(Icons.upload_file),
-                label: Text('Upload ${field.label}'),
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ScreenUnitUtil.getSpacing(16),
-                    vertical: ScreenUnitUtil.getSpacing(12),
-                  ),
-                ),
-              ),
-            SizedBox(height: ScreenUnitUtil.getSpacing(4)),
-            Text(
-              'Maximum file size: ${maxSizeMb}MB',
-              style: TextStyle(
-                fontSize: ScreenUnitUtil.getFontSize(12),
-                color: Colors.grey.shade600,
-              ),
-            ),
-            if (formFieldState.hasError)
-              Padding(
-                padding: EdgeInsets.only(top: ScreenUnitUtil.getSpacing(4)),
-                child: Text(
-                  formFieldState.errorText ?? '',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: ScreenUnitUtil.getFontSize(12),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -327,7 +112,7 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Additional Information',
+          'Tax Details (P46)',
           style: TextStyle(
             fontSize: ScreenUnitUtil.getFontSize(20),
             fontWeight: FontWeight.w600,
@@ -338,95 +123,400 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
       body: SafeArea(
         child: Consumer<SignUpViewModel>(
           builder: (context, viewModel, child) {
-            // Debug logging
-            debugPrint(
-              'Step 5 Screen - isLoadingCustomFields: ${viewModel.isLoadingCustomFields}',
-            );
-            debugPrint(
-              'Step 5 Screen - hasCustomFields: ${viewModel.hasCustomFields}',
-            );
-            debugPrint(
-              'Step 5 Screen - customFields.length: ${viewModel.customFields.length}',
-            );
-
-            // Show loading while fetching custom fields
-            if (viewModel.isLoadingCustomFields) {
-              return Center(child: CircularProgressIndicator());
-            }
-
-            // If no custom fields, show message with debug info
-            if (viewModel.customFields.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(24)),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.info_outline, size: 64, color: Colors.grey),
-                      SizedBox(height: ScreenUnitUtil.getSpacing(16)),
-                      Text(
-                        'No additional information required',
-                        style: TextStyle(
-                          fontSize: ScreenUnitUtil.getFontSize(18),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-                      Text(
-                        'hasCustomFields: ${viewModel.hasCustomFields}',
-                        style: TextStyle(
-                          fontSize: ScreenUnitUtil.getFontSize(12),
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        'customFields count: ${viewModel.customFields.length}',
-                        style: TextStyle(
-                          fontSize: ScreenUnitUtil.getFontSize(12),
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
+              child: Form(
+                key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Step Indicator
                     StepIndicator(
                       currentStep: 5,
-                      totalSteps: viewModel.hasCustomFields ? 5 : 4,
-                    ),
-                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-
-                    // Custom Fields
-                    ...viewModel.customFields.map((field) {
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: ScreenUnitUtil.getSpacing(16),
-                        ),
-                        child: _buildField(field),
-                      );
-                    }).toList(),
-
-                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-
-                    // Submit Button
-                    PrimaryButton(
-                      text: widget.isEditMode
-                          ? 'Update'
-                          : 'Complete Registration',
-                      isLoading: viewModel.isStepLoading,
-                      onPressed: () => _handleSubmit(viewModel),
+                      totalSteps: viewModel.hasCustomFields ? 6 : 5,
                     ),
                     SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+
+                    // Your details
+                    Text(
+                      'Your details',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(18),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    // National Insurance number
+                    TextFormField(
+                      controller: _niController,
+                      decoration: const InputDecoration(
+                        labelText: 'National Insurance number *',
+                        hintText: 'AB 12 34 56 C',
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(20),
+                      ],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'National Insurance number is required';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        viewModel.updateStep5P46NatInsuranceNo(value.trim());
+                        viewModel.updateStep1NatInsuranceNo(value.trim());
+                      },
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    // Title
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Title',
+                        hintText: 'Mr, Mrs, Miss, Ms or other',
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(20),
+                      ],
+                      onChanged: (value) {
+                        viewModel.updateStep5P46Title(value.trim());
+                      },
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    // Surname
+                    TextFormField(
+                      controller: _surnameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Surname or family name *',
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Surname is required';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        viewModel.updateStep5P46Surname(value.trim());
+                        viewModel.updateStep1Surname(value.trim());
+                      },
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    // First name
+                    TextFormField(
+                      controller: _firstNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'First or given name(s) *',
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'First name is required';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        viewModel.updateStep5P46FirstName(value.trim());
+                        viewModel.updateStep1Name(value.trim());
+                      },
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    // Date of birth
+                    TextFormField(
+                      controller: _dobController,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Date of birth *',
+                        hintText: 'YYYY-MM-DD',
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Date of birth is required';
+                        }
+                        return null;
+                      },
+                      onTap: () => _pickDob(viewModel),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    // Gender
+                    Text(
+                      'Are you male or female? *',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(14),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: RadioListTile<String>(
+                            title: const Text('Male'),
+                            value: 'Male',
+                            groupValue: _selectedGender,
+                            onChanged: (val) {
+                              setState(() => _selectedGender = val);
+                              viewModel.updateStep5P46Gender(val);
+                              viewModel.updateStep1Gender(val);
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: RadioListTile<String>(
+                            title: const Text('Female'),
+                            value: 'Female',
+                            groupValue: _selectedGender,
+                            onChanged: (val) {
+                              setState(() => _selectedGender = val);
+                              viewModel.updateStep5P46Gender(val);
+                              viewModel.updateStep1Gender(val);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_selectedGender == null)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: ScreenUnitUtil.getSpacing(12),
+                          bottom: ScreenUnitUtil.getSpacing(8),
+                        ),
+                        child: Text(
+                          'Please select gender',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: ScreenUnitUtil.getFontSize(12),
+                          ),
+                        ),
+                      ),
+
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    // Address
+                    TextFormField(
+                      controller: _postcodeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Postcode *',
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Postcode is required';
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        viewModel.updateStep5P46Postcode(value.trim());
+                        viewModel.updateStep1PostCode(value.trim());
+                      },
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    TextFormField(
+                      controller: _houseFlatController,
+                      decoration: const InputDecoration(
+                        labelText: 'House or flat number',
+                      ),
+                      onChanged: (value) {
+                        viewModel.updateStep5P46HouseFlatNumber(value.trim());
+                      },
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
+                    TextFormField(
+                      controller: _restOfAddressController,
+                      decoration: const InputDecoration(
+                        labelText:
+                            'Rest of address including house name or flat name',
+                      ),
+                      maxLines: 2,
+                      onChanged: (value) {
+                        viewModel.updateStep5P46RestOfAddress(value.trim());
+                        viewModel.updateStep1Address(value.trim());
+                      },
+                    ),
+
+                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+
+                    // Present circumstances
+                    Text(
+                      'Your present circumstances *',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(16),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    _buildOptionAbcTile(
+                      code: 'A',
+                      description:
+                          'This is my first job since 6 April and I have not been receiving taxable Jobseeker’s Allowance or taxable Incapacity Benefit or a state or occupational pension.',
+                    ),
+                    _buildOptionAbcTile(
+                      code: 'B',
+                      description:
+                          'This is now my only job, but since last 6 April I have had another job, or have received taxable Jobseeker’s Allowance or taxable Incapacity Benefit. I do not receive a state or occupational pension.',
+                    ),
+                    _buildOptionAbcTile(
+                      code: 'C',
+                      description:
+                          'I have another job or receive a state or occupational pension.',
+                    ),
+                    if (_selectedOptionAbc == null)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: ScreenUnitUtil.getSpacing(12),
+                          bottom: ScreenUnitUtil.getSpacing(8),
+                        ),
+                        child: Text(
+                          'Please select one option (A, B or C)',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: ScreenUnitUtil.getFontSize(12),
+                          ),
+                        ),
+                      ),
+
+                    SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+
+                    // Student loans
+                    Text(
+                      'Student Loans',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(16),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    CheckboxListTile(
+                      value: _optionD,
+                      onChanged: (val) {
+                        setState(() => _optionD = val ?? false);
+                        viewModel.updateStep5P46OptionD(_optionD);
+                      },
+                      title: const Text(
+                        'If you left a course of Higher Education before last 6 April and received your first Student Loan instalment on or after 1 September 1998 and you have not fully repaid your student loan, tick this box.',
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+
+                    SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+
+                    // Signature confirmation
+                    Text(
+                      'Signature and date',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(16),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    CheckboxListTile(
+                      value: _confirmCorrect,
+                      onChanged: (val) {
+                        setState(() => _confirmCorrect = val ?? false);
+                      },
+                      title: const Text(
+                        'I can confirm that this information is correct.',
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    if (!_confirmCorrect)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: ScreenUnitUtil.getSpacing(12),
+                          bottom: ScreenUnitUtil.getSpacing(8),
+                        ),
+                        child: Text(
+                          'Please confirm that the information is correct',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: ScreenUnitUtil.getFontSize(12),
+                          ),
+                        ),
+                      ),
+
+                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+
+                    // Error message
+                    if (viewModel.errorMessage != null)
+                      Container(
+                        padding: EdgeInsets.all(
+                          ScreenUnitUtil.getSpacing(12),
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              Theme.of(context).colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(
+                            ScreenUnitUtil.getSpacing(8),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            SizedBox(
+                                width: ScreenUnitUtil.getSpacing(8)),
+                            Expanded(
+                              child: Text(
+                                viewModel.errorMessage!,
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onErrorContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+
+                    // Navigation buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: viewModel.isStepLoading
+                                ? null
+                                : () {
+                                    viewModel.goToStep(4);
+                                    Navigator.pushReplacementNamed(
+                                      context,
+                                      RouteNames.signUpStep4,
+                                      arguments: {
+                                        'isEditMode': widget.isEditMode,
+                                      },
+                                    );
+                                  },
+                            child: const Text('Back'),
+                          ),
+                        ),
+                        SizedBox(
+                            width: ScreenUnitUtil.getSpacing(16)),
+                        Expanded(
+                          child: PrimaryButton(
+                            text: viewModel.hasCustomFields
+                                ? 'Next'
+                                : (widget.isEditMode
+                                    ? 'Update'
+                                    : 'Finish'),
+                            isLoading: viewModel.isStepLoading,
+                            onPressed: () => _handleSubmit(viewModel),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -437,40 +527,58 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
     );
   }
 
+  Widget _buildOptionAbcTile({
+    required String code,
+    required String description,
+  }) {
+    return RadioListTile<String>(
+      value: code,
+      groupValue: _selectedOptionAbc,
+      onChanged: (val) {
+        final viewModel = context.read<SignUpViewModel>();
+        setState(() => _selectedOptionAbc = val);
+        viewModel.updateStep5P46OptionAbc(val);
+      },
+      title: Text(description),
+      secondary: Text(
+        code,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: ScreenUnitUtil.getFontSize(16),
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleSubmit(SignUpViewModel viewModel) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_selectedGender == null || _selectedOptionAbc == null) return;
+    if (!_confirmCorrect) return;
 
-    // Prepare files for upload - use field IDs as keys
-    final filesToUpload = <int, File>{};
-    for (var field in viewModel.customFields) {
-      if (field.type.toLowerCase() == 'document') {
-        final file = _documentFiles[field.id];
-        if (file != null) {
-          filesToUpload[field.id] = file;
-        }
-      }
-    }
-
-    final success = await viewModel.submitStep5(files: filesToUpload);
+    final success = await viewModel.submitStep5P46();
     if (success && mounted) {
-      if (widget.isEditMode) {
-        // In edit mode, go back to profile edit screen
-        Navigator.pop(context, true);
-        ToastMessage.showSuccess(
-          'Custom fields updated successfully!',
+      if (viewModel.hasCustomFields && viewModel.customFields.isNotEmpty) {
+        // Move to Step 6: Additional Information
+        viewModel.goToStep(6);
+        Navigator.pushReplacementNamed(
           context,
+          RouteNames.signUpStep6,
+          arguments: {'isEditMode': widget.isEditMode},
         );
+        ToastMessage.showSuccess('Tax details saved!', context);
       } else {
-        // Registration complete - clear all auth data and providers
-        await AuthService.logout();
-        viewModel.reset();
+        // Registration complete - save token if available
+        if (viewModel.registrationToken != null &&
+            viewModel.registrationToken!.isNotEmpty) {
+          await AuthService.saveToken(viewModel.registrationToken!);
+        }
 
-        // Navigate to login screen and clear navigation stack
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil(RouteNames.login, (route) => false);
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          RouteNames.home,
+          (route) => false,
+        );
         ToastMessage.showSuccess(
-          'Registration completed successfully! Please login to continue.',
+          'Registration completed successfully!',
           context,
         );
       }
@@ -479,3 +587,4 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
     }
   }
 }
+

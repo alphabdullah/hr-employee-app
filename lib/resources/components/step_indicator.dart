@@ -23,6 +23,10 @@ class StepIndicator extends StatelessWidget {
         return 'Availability';
       case 4:
         return 'Bank';
+      case 5:
+        return 'Tax';
+      case 6:
+        return 'Additional';
       default:
         return '';
     }

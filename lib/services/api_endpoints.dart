@@ -113,7 +113,29 @@ class ApiEndpoints {
   /// Response format: {"profile_fields": [{"id": 1, "label": "...", "type": "...", "is_required": true, ...}]}
   static const String getCustomFields = '/api/profile-fields';
 
-  /// Register Step 5 - Custom Fields (Profile Extra)
+  /// Register Step 5 - P46 Tax Details (Employee without a P45)
+  ///
+  /// **Method:** POST
+  /// **Path:** /api/register/step-5
+  /// **Auth:** Required (Bearer token from Step 1)
+  /// **Headers:** Content-Type: application/json, Accept: application/json,
+  ///             Authorization: Bearer {token}
+  ///
+  /// **Body:**
+  /// - nat_insurance_no (string)
+  /// - title (string)
+  /// - surname (string)
+  /// - first_name (string)
+  /// - gender (string)
+  /// - dob (string, date Y-m-d)
+  /// - postcode (string)
+  /// - house_flat_number (string)
+  /// - rest_of_address (string)
+  /// - option_abc (string: A | B | C)
+  /// - option_d (boolean)
+  static const String registerStep5 = '/api/register/step-5';
+
+  /// Custom Profile Fields (Profile Extra)
   ///
   /// **Method:** POST
   /// **Path:** /api/me/profile-extra
@@ -124,7 +146,7 @@ class ApiEndpoints {
   /// - Text fields: fields[<id>] = string value
   /// - Document fields: fields[<id>] = file (max 20 MB)
   /// Example: fields[1] = "Some text", fields[2] = [file]
-  static const String registerStep5 = '/api/me/profile-extra';
+  static const String profileExtra = '/api/me/profile-extra';
 
   /// Legacy register endpoint (deprecated - use registerStep1 instead)
   @Deprecated('Use registerStep1 instead')

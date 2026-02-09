@@ -22,6 +22,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       final viewModel = context.read<SignUpViewModel>();
       viewModel.setEditMode(true);
       viewModel.loadProfileData();
+      // Fetch custom fields to determine if Step 6 should be shown
+      viewModel.fetchCustomFields();
     });
   }
 
@@ -67,6 +69,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               _buildPrimaryStepButton(context, 'Availability', Icons.calendar_today_outlined, 3),
               SizedBox(height: ScreenUnitUtil.getSpacing(20)),
               _buildPrimaryStepButton(context, 'Bank Details', Icons.account_balance_outlined, 4),
+              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+              _buildPrimaryStepButton(context, 'Tax Details', Icons.receipt_long_outlined, 5),
+              // Show Step 6 button if custom fields exist
+              if (viewModel.hasCustomFields && viewModel.customFields.isNotEmpty) ...[
+                SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+                _buildPrimaryStepButton(context, 'Additional Information', Icons.info_outline, 6),
+              ],
               SizedBox(height: ScreenUnitUtil.getSpacing(34)),
               Text(
                 'Tap any button to go directly into that step for editing.',
@@ -115,6 +124,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       case 4:
         // For step 4, redirect to declaration screen first
         route = RouteNames.declaration;
+        break;
+      case 5:
+        route = RouteNames.signUpStep5;
+        break;
+      case 6:
+        route = RouteNames.signUpStep6;
         break;
       default:
         route = RouteNames.signUpStep1;

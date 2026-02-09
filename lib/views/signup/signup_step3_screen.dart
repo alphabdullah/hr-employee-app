@@ -68,7 +68,7 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
                 // Step Indicator
                 StepIndicator(
                   currentStep: 3,
-                  totalSteps: viewModel.hasCustomFields ? 5 : 4,
+                  totalSteps: viewModel.hasCustomFields ? 6 : 5,
                 ),
                 
                 // Form Content

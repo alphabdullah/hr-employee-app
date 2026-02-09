@@ -928,7 +928,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
               children: [
                 StepIndicator(
                   currentStep: 1,
-                  totalSteps: viewModel.hasCustomFields ? 5 : 4,
+                  totalSteps: viewModel.hasCustomFields ? 6 : 5,
                 ),
 
                 Expanded(

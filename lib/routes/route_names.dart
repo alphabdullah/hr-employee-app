@@ -14,6 +14,7 @@ class RouteNames {
   static const String termsConditions = '/signup/terms-conditions';
   static const String signUpStep4 = '/signup/step4';
   static const String signUpStep5 = '/signup/step5';
+  static const String signUpStep6 = '/signup/step6';
   static const String forgotPassword = '/forgot-password';
   
   // Home Routes (for future use)

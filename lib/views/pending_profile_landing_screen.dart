@@ -30,6 +30,7 @@ class _PendingProfileLandingScreenState extends State<PendingProfileLandingScree
       3: RouteNames.signUpStep3,
       4: RouteNames.signUpStep4,
       5: RouteNames.signUpStep5,
+      6: RouteNames.signUpStep6,
     }[step];
 
     if (route == null) return;
@@ -53,7 +54,7 @@ class _PendingProfileLandingScreenState extends State<PendingProfileLandingScree
         child: Consumer<SignUpViewModel>(
           builder: (context, viewModel, child) {
             // Determine total steps based on custom fields
-            final totalSteps = viewModel.hasCustomFields ? 5 : 4;
+            final totalSteps = viewModel.hasCustomFields ? 6 : 5;
             
             return Padding(
               padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(24)),
@@ -88,12 +89,17 @@ class _PendingProfileLandingScreenState extends State<PendingProfileLandingScree
                     text: 'Bank Details (Step 4)',
                     onPressed: () => _navigateToStep(context, 4),
                   ),
-                  // Show Step 5 button if custom fields exist
+                  SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  PrimaryButton(
+                    text: 'Tax Details (Step 5)',
+                    onPressed: () => _navigateToStep(context, 5),
+                  ),
+                  // Show Step 6 button if custom fields exist
                   if (viewModel.hasCustomFields && viewModel.customFields.isNotEmpty) ...[
                     SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                     PrimaryButton(
-                      text: 'Additional Information (Step 5)',
-                      onPressed: () => _navigateToStep(context, 5),
+                      text: 'Additional Information (Step 6)',
+                      onPressed: () => _navigateToStep(context, 6),
                     ),
                   ],
                 ],

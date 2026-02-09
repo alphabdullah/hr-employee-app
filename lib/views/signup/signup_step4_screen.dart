@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/signup_viewmodel.dart';
-import '../../services/auth_service.dart';
 import '../../utils/screen_unit_util.dart';
 import '../../resources/components/primary_button.dart';
 import '../../resources/components/step_indicator.dart';
@@ -131,7 +130,7 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                 // Step Indicator
                 StepIndicator(
                   currentStep: 4,
-                  totalSteps: viewModel.hasCustomFields ? 5 : 4,
+                  totalSteps: viewModel.hasCustomFields ? 6 : 5,
                 ),
 
                 // Form Content
@@ -532,63 +531,17 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
         Navigator.pop(context, true);
         ToastMessage.showSuccess('Bank details updated successfully!', context);
       } else {
-        // Ensure custom fields are fetched before checking
-        debugPrint(
-          'Step 4: Fetching custom fields to check if Step 5 is needed...',
+        // Always navigate to Step 5 (P46 Tax Details)
+        debugPrint('Step 4 Submit - Navigating to Step 5 (P46)...');
+        viewModel.goToStep(5);
+
+        Navigator.pushReplacementNamed(
+          context,
+          RouteNames.signUpStep5,
+          arguments: {'isEditMode': widget.isEditMode},
         );
 
-        // Force fetch (don't use cache) to ensure we have latest data
-        await viewModel.fetchCustomFields(forceRefresh: true);
-
-        // Wait a bit to ensure state is updated
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        // Check if custom fields exist - if yes, go to Step 5, otherwise complete registration
-        debugPrint(
-          'Step 4 Submit - hasCustomFields: ${viewModel.hasCustomFields}',
-        );
-        debugPrint(
-          'Step 4 Submit - customFields count: ${viewModel.customFields.length}',
-        );
-        debugPrint(
-          'Step 4 Submit - customFields: ${viewModel.customFields.map((f) => f.label).toList()}',
-        );
-
-        // Double check: if customFields list is not empty, navigate to Step 5
-        if (viewModel.customFields.isNotEmpty) {
-          debugPrint(
-            'Step 4 Submit - Custom fields found! Navigating to Step 5...',
-          );
-          // Navigate to Step 5
-          viewModel.goToStep(5);
-
-          // Use pushReplacementNamed to replace Step 4 with Step 5
-          Navigator.pushReplacementNamed(
-            context,
-            RouteNames.signUpStep5,
-            arguments: {'isEditMode': false},
-          );
-
-          ToastMessage.showSuccess('Bank details saved!', context);
-        } else {
-          debugPrint(
-            'Step 4 Submit - No custom fields found. Completing registration...',
-          );
-          // Registration complete - save token if we used registration token
-          if (viewModel.registrationToken != null &&
-              viewModel.registrationToken!.isNotEmpty) {
-            await AuthService.saveToken(viewModel.registrationToken!);
-          }
-
-          // Navigate to home screen
-          Navigator.of(
-            context,
-          ).pushNamedAndRemoveUntil(RouteNames.home, (route) => false);
-          ToastMessage.showSuccess(
-            'Registration completed successfully!',
-            context,
-          );
-        }
+        ToastMessage.showSuccess('Bank details saved!', context);
       }
     } else if (mounted && viewModel.errorMessage != null) {
       ToastMessage.showError(viewModel.errorMessage!, context);
