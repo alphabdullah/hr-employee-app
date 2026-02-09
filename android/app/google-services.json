@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "281767469313",
-    "project_id": "retail-support-co",
-    "storage_bucket": "retail-support-co.firebasestorage.app"
+    "project_number": "633918414762",
+    "project_id": "hr-employee-app-9aca8",
+    "storage_bucket": "hr-employee-app-9aca8.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:281767469313:android:b96c7f36dbba6507533b00",
-        "android_client_info": {
-          "package_name": "com.example.hr_employee_app"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBlr74-5buCwByeKHyPuFeh1-1VGT0M2Ik"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:281767469313:android:68e2ee1f0f281d45533b00",
+        "mobilesdk_app_id": "1:633918414762:android:0119702e69999e572655d3",
         "android_client_info": {
           "package_name": "com.hr.app"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBlr74-5buCwByeKHyPuFeh1-1VGT0M2Ik"
+          "current_key": "AIzaSyA66QZhHR4cgbmrfolZeskwuMgfZWAsjek"
         }
       ],
       "services": {

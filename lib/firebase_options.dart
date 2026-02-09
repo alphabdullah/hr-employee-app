@@ -41,49 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCI6Z4f5by1bZAjLcCaKP3TLS_XQRP3k5c',
-    appId: '1:281767469313:web:2334314471f6144f533b00',
-    messagingSenderId: '281767469313',
-    projectId: 'retail-support-co',
-    authDomain: 'retail-support-co.firebaseapp.com',
-    storageBucket: 'retail-support-co.firebasestorage.app',
-    measurementId: 'G-67038WX6B3',
+    apiKey: 'AIzaSyAMJldwkzvXFbOt6Z5FYQYjxxjGzbAfItc',
+    appId: '1:633918414762:web:8b4431bd1b847e932655d3',
+    messagingSenderId: '633918414762',
+    projectId: 'hr-employee-app-9aca8',
+    authDomain: 'hr-employee-app-9aca8.firebaseapp.com',
+    storageBucket: 'hr-employee-app-9aca8.firebasestorage.app',
+    measurementId: 'G-XGX0JR2T98',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBlr74-5buCwByeKHyPuFeh1-1VGT0M2Ik',
-    appId: '1:281767469313:android:68e2ee1f0f281d45533b00',
-    messagingSenderId: '281767469313',
-    projectId: 'retail-support-co',
-    storageBucket: 'retail-support-co.firebasestorage.app',
+    apiKey: 'AIzaSyA66QZhHR4cgbmrfolZeskwuMgfZWAsjek',
+    appId: '1:633918414762:android:0119702e69999e572655d3',
+    messagingSenderId: '633918414762',
+    projectId: 'hr-employee-app-9aca8',
+    storageBucket: 'hr-employee-app-9aca8.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyD_K61PxyaZp7OMjMPo2DNS-TNYqhxcFqI',
-    appId: '1:281767469313:ios:eddb5d35d600df7b533b00',
-    messagingSenderId: '281767469313',
-    projectId: 'retail-support-co',
-    storageBucket: 'retail-support-co.firebasestorage.app',
+    apiKey: 'AIzaSyCAj9F7QGStLcTS4TP2vZzdSTD1ZGnNM8M',
+    appId: '1:633918414762:ios:75c727c61f0e41bd2655d3',
+    messagingSenderId: '633918414762',
+    projectId: 'hr-employee-app-9aca8',
+    storageBucket: 'hr-employee-app-9aca8.firebasestorage.app',
     iosBundleId: 'com.hr.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyD_K61PxyaZp7OMjMPo2DNS-TNYqhxcFqI',
-    appId: '1:281767469313:ios:c2433d86cb2d43bb533b00',
-    messagingSenderId: '281767469313',
-    projectId: 'retail-support-co',
-    storageBucket: 'retail-support-co.firebasestorage.app',
+    apiKey: 'AIzaSyCAj9F7QGStLcTS4TP2vZzdSTD1ZGnNM8M',
+    appId: '1:633918414762:ios:f8a1fbacff7357bb2655d3',
+    messagingSenderId: '633918414762',
+    projectId: 'hr-employee-app-9aca8',
+    storageBucket: 'hr-employee-app-9aca8.firebasestorage.app',
     iosBundleId: 'com.example.hrEmployeeApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCI6Z4f5by1bZAjLcCaKP3TLS_XQRP3k5c',
-    appId: '1:281767469313:web:6f3d5962e324e651533b00',
-    messagingSenderId: '281767469313',
-    projectId: 'retail-support-co',
-    authDomain: 'retail-support-co.firebaseapp.com',
-    storageBucket: 'retail-support-co.firebasestorage.app',
-    measurementId: 'G-SL5E6K7CGH',
+    apiKey: 'AIzaSyAMJldwkzvXFbOt6Z5FYQYjxxjGzbAfItc',
+    appId: '1:633918414762:web:dac80841ccf999f62655d3',
+    messagingSenderId: '633918414762',
+    projectId: 'hr-employee-app-9aca8',
+    authDomain: 'hr-employee-app-9aca8.firebaseapp.com',
+    storageBucket: 'hr-employee-app-9aca8.firebasestorage.app',
+    measurementId: 'G-N9B8FPQWD9',
   );
 
 }
