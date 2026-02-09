@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBlr74-5buCwByeKHyPuFeh1-1VGT0M2Ik',
-    appId: '1:281767469313:android:b96c7f36dbba6507533b00',
+    appId: '1:281767469313:android:68e2ee1f0f281d45533b00',
     messagingSenderId: '281767469313',
     projectId: 'retail-support-co',
     storageBucket: 'retail-support-co.firebasestorage.app',
@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD_K61PxyaZp7OMjMPo2DNS-TNYqhxcFqI',
-    appId: '1:281767469313:ios:c2433d86cb2d43bb533b00',
+    appId: '1:281767469313:ios:eddb5d35d600df7b533b00',
     messagingSenderId: '281767469313',
     projectId: 'retail-support-co',
     storageBucket: 'retail-support-co.firebasestorage.app',
-    iosBundleId: 'com.example.hrEmployeeApp',
+    iosBundleId: 'com.hr.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
