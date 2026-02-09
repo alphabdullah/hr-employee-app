@@ -1,4 +1,4 @@
-package com.example.hr_employee_app
+package com.hr.app
 
 import io.flutter.embedding.android.FlutterActivity
 
