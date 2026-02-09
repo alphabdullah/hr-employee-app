@@ -152,7 +152,10 @@ class _SignUpStep2ScreenState extends State<SignUpStep2Screen> {
           builder: (context, viewModel, child) {
             return Column(
               children: [
-                const StepIndicator(currentStep: 2, totalSteps: 4),
+                StepIndicator(
+                  currentStep: 2,
+                  totalSteps: viewModel.hasCustomFields ? 5 : 4,
+                ),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(

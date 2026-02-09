@@ -1,6 +1,5 @@
 /// Models for multi-step registration flow
 
-
 /// Step 1: Profile & Account Information
 class RegisterStep1Model {
   final String name;
@@ -75,7 +74,7 @@ class RegisterStep1Model {
       'surname': surname,
       'email': email,
     };
-    
+
     // Only include password fields if password is provided or in registration mode
     if (includePassword && password.isNotEmpty) {
       json['password'] = password;
@@ -84,24 +83,32 @@ class RegisterStep1Model {
 
     if (dob != null && dob!.isNotEmpty) json['dob'] = dob;
     if (telNo != null && telNo!.isNotEmpty) json['tel_no'] = telNo;
-    if (whatsappNo != null && whatsappNo!.isNotEmpty) json['whatsapp_no'] = whatsappNo;
+    if (whatsappNo != null && whatsappNo!.isNotEmpty)
+      json['whatsapp_no'] = whatsappNo;
     if (address != null && address!.isNotEmpty) json['address'] = address;
     if (country != null && country!.isNotEmpty) json['country'] = country;
     if (region != null && region!.isNotEmpty) json['region'] = region; // New
-    if (district != null && district!.isNotEmpty) json['district'] = district; // New
+    if (district != null && district!.isNotEmpty)
+      json['district'] = district; // New
     if (city != null && city!.isNotEmpty) json['city'] = city;
     if (latitude != null) json['latitude'] = latitude;
     if (longitude != null) json['longitude'] = longitude;
     if (postCode != null && postCode!.isNotEmpty) json['post_code'] = postCode;
-    if (natInsuranceNo != null && natInsuranceNo!.isNotEmpty) json['nat_insurance_no'] = natInsuranceNo;
-    if (nationality != null && nationality!.isNotEmpty) json['nationality'] = nationality;
+    if (natInsuranceNo != null && natInsuranceNo!.isNotEmpty)
+      json['nat_insurance_no'] = natInsuranceNo;
+    if (nationality != null && nationality!.isNotEmpty)
+      json['nationality'] = nationality;
     if (rightToWorkUk != null) json['right_to_work_uk'] = rightToWorkUk;
     if (gender != null && gender!.isNotEmpty) json['gender'] = gender;
-    if (maritalStatus != null && maritalStatus!.isNotEmpty) json['marital_status'] = maritalStatus;
+    if (maritalStatus != null && maritalStatus!.isNotEmpty)
+      json['marital_status'] = maritalStatus;
     if (needWorkPermit != null) json['need_work_permit'] = needWorkPermit;
-    if (workPermitExpiry != null && workPermitExpiry!.isNotEmpty) json['work_permit_expiry'] = workPermitExpiry;
-    if (studentVisaHoursPerWeek != null) json['student_visa_hours_per_week'] = studentVisaHoursPerWeek;
-    if (preferContact != null && preferContact!.isNotEmpty) json['prefer_contact'] = preferContact;
+    if (workPermitExpiry != null && workPermitExpiry!.isNotEmpty)
+      json['work_permit_expiry'] = workPermitExpiry;
+    if (studentVisaHoursPerWeek != null)
+      json['student_visa_hours_per_week'] = studentVisaHoursPerWeek;
+    if (preferContact != null && preferContact!.isNotEmpty)
+      json['prefer_contact'] = preferContact;
     if (userType != null && userType!.isNotEmpty) json['user_type'] = userType;
 
     return json;
@@ -159,13 +166,13 @@ class RegisterStep1Model {
       maritalStatus: maritalStatus ?? this.maritalStatus,
       needWorkPermit: needWorkPermit ?? this.needWorkPermit,
       workPermitExpiry: workPermitExpiry ?? this.workPermitExpiry,
-      studentVisaHoursPerWeek: studentVisaHoursPerWeek ?? this.studentVisaHoursPerWeek,
+      studentVisaHoursPerWeek:
+          studentVisaHoursPerWeek ?? this.studentVisaHoursPerWeek,
       preferContact: preferContact ?? this.preferContact,
       userType: userType ?? this.userType,
     );
   }
 }
-
 
 /// Step 2: Compliance Information
 class RegisterStep2Model {
@@ -211,19 +218,25 @@ class RegisterStep2Model {
     final json = <String, dynamic>{};
 
     if (isDriver != null) json['is_driver'] = isDriver;
-    if (drivingLicenseNo != null && drivingLicenseNo!.isNotEmpty) json['driving_license_no'] = drivingLicenseNo;
-    if (drivingLicenseDate != null && drivingLicenseDate!.isNotEmpty) json['driving_license_date'] = drivingLicenseDate;
+    if (drivingLicenseNo != null && drivingLicenseNo!.isNotEmpty)
+      json['driving_license_no'] = drivingLicenseNo;
+    if (drivingLicenseDate != null && drivingLicenseDate!.isNotEmpty)
+      json['driving_license_date'] = drivingLicenseDate;
     if (ownCar != null) json['own_car'] = ownCar;
     if (criminalRecord != null) json['criminal_record'] = criminalRecord;
-    if (criminalRecordType != null && criminalRecordType!.isNotEmpty) json['criminal_record_type'] = criminalRecordType;
+    if (criminalRecordType != null && criminalRecordType!.isNotEmpty)
+      json['criminal_record_type'] = criminalRecordType;
     if (cscs != null) json['cscs'] = cscs;
     if (sia != null) json['sia'] = sia;
     if (mhe != null) json['mhe'] = mhe;
     if (cis != null) json['cis'] = cis;
     if (firstAid != null) json['first_aid'] = firstAid;
-    if (otherCardText != null && otherCardText!.isNotEmpty) json['other_card_text'] = otherCardText;
-    if (registeredDisabled != null) json['registered_disabled'] = registeredDisabled;
-    if (disabilityAdjustmentsText != null && disabilityAdjustmentsText!.isNotEmpty) {
+    if (otherCardText != null && otherCardText!.isNotEmpty)
+      json['other_card_text'] = otherCardText;
+    if (registeredDisabled != null)
+      json['registered_disabled'] = registeredDisabled;
+    if (disabilityAdjustmentsText != null &&
+        disabilityAdjustmentsText!.isNotEmpty) {
       json['disability_adjustments_text'] = disabilityAdjustmentsText;
     }
     if (disabilityDetailsText != null && disabilityDetailsText!.isNotEmpty) {
@@ -264,8 +277,10 @@ class RegisterStep2Model {
       firstAid: firstAid ?? this.firstAid,
       otherCardText: otherCardText ?? this.otherCardText,
       registeredDisabled: registeredDisabled ?? this.registeredDisabled,
-      disabilityAdjustmentsText: disabilityAdjustmentsText ?? this.disabilityAdjustmentsText,
-      disabilityDetailsText: disabilityDetailsText ?? this.disabilityDetailsText,
+      disabilityAdjustmentsText:
+          disabilityAdjustmentsText ?? this.disabilityAdjustmentsText,
+      disabilityDetailsText:
+          disabilityDetailsText ?? this.disabilityDetailsText,
     );
   }
 }
@@ -275,20 +290,14 @@ class RegisterStep3Model {
   final List<String> dayDays; // monday, tuesday, etc.
   final List<String> nightDays;
 
-  RegisterStep3Model({
-    this.dayDays = const [],
-    this.nightDays = const [],
-  });
+  RegisterStep3Model({this.dayDays = const [], this.nightDays = const []});
 
   factory RegisterStep3Model.empty() {
     return RegisterStep3Model();
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'day_days': dayDays,
-      'night_days': nightDays,
-    };
+    return {'day_days': dayDays, 'night_days': nightDays};
   }
 
   RegisterStep3Model copyWith({
@@ -325,10 +334,12 @@ class RegisterStep4Model {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
 
-    if (accountHolder != null && accountHolder!.isNotEmpty) json['account_holder'] = accountHolder;
+    if (accountHolder != null && accountHolder!.isNotEmpty)
+      json['account_holder'] = accountHolder;
     if (bankName != null && bankName!.isNotEmpty) json['bank_name'] = bankName;
     if (bankTown != null && bankTown!.isNotEmpty) json['bank_town'] = bankTown;
-    if (accountNumber != null && accountNumber!.isNotEmpty) json['account_number'] = accountNumber;
+    if (accountNumber != null && accountNumber!.isNotEmpty)
+      json['account_number'] = accountNumber;
     if (sortCode != null && sortCode!.isNotEmpty) json['sort_code'] = sortCode;
 
     return json;
@@ -348,5 +359,88 @@ class RegisterStep4Model {
       accountNumber: accountNumber ?? this.accountNumber,
       sortCode: sortCode ?? this.sortCode,
     );
+  }
+}
+
+/// Custom Field Definition Model
+class CustomFieldModel {
+  final int id;
+  final String label; // Display label
+  final String
+  type; // text, number, email, date, select, textarea, checkbox, document
+  final bool isRequired;
+  final int sortOrder;
+  final int? maxFileSizeMb; // For document type
+  final List<String>? options; // For select/radio fields
+  final String? placeholder;
+  final int? maxLength;
+  final String? validationRule;
+
+  // Generate a field name/key from id and label
+  String get name => 'field_${id}_${label.toLowerCase().replaceAll(' ', '_')}';
+
+  CustomFieldModel({
+    required this.id,
+    required this.label,
+    required this.type,
+    this.isRequired = false,
+    this.sortOrder = 0,
+    this.maxFileSizeMb,
+    this.options,
+    this.placeholder,
+    this.maxLength,
+    this.validationRule,
+  });
+
+  factory CustomFieldModel.fromJson(Map<String, dynamic> json) {
+    return CustomFieldModel(
+      id: json['id'] as int,
+      label: json['label'] as String,
+      type: json['type'] as String,
+      isRequired: json['is_required'] as bool? ?? false,
+      sortOrder: json['sort_order'] as int? ?? 0,
+      maxFileSizeMb: json['max_file_size_mb'] as int?,
+      options: json['options'] != null
+          ? List<String>.from(json['options'])
+          : null,
+      placeholder: json['placeholder'] as String?,
+      maxLength: json['max_length'] as int?,
+      validationRule: json['validation_rule'] as String?,
+    );
+  }
+}
+
+/// Step 5: Custom Fields
+class RegisterStep5Model {
+  final Map<int, dynamic> customFieldValues; // Field ID -> value
+
+  RegisterStep5Model({Map<int, dynamic>? customFieldValues})
+    : customFieldValues = customFieldValues ?? {};
+
+  factory RegisterStep5Model.empty() {
+    return RegisterStep5Model();
+  }
+
+  /// Convert to API format: fields[<id>] = value
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> result = {};
+    customFieldValues.forEach((id, value) {
+      result['fields[$id]'] = value;
+    });
+    return result;
+  }
+
+  RegisterStep5Model copyWith({Map<int, dynamic>? customFieldValues}) {
+    return RegisterStep5Model(
+      customFieldValues: customFieldValues ?? this.customFieldValues,
+    );
+  }
+
+  void setFieldValue(int fieldId, dynamic value) {
+    customFieldValues[fieldId] = value;
+  }
+
+  dynamic getFieldValue(int fieldId) {
+    return customFieldValues[fieldId];
   }
 }

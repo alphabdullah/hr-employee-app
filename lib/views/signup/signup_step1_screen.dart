@@ -820,6 +820,8 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
         _passwordConfirmationController.clear();
       }
 
+      // Fetch custom fields to determine if Step 5 should be shown
+      await viewModel.fetchCustomFields();
       await viewModel.loadProfileData();
 
       if (!mounted) return;
@@ -924,7 +926,10 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
 
             return Column(
               children: [
-                StepIndicator(currentStep: 1, totalSteps: 4),
+                StepIndicator(
+                  currentStep: 1,
+                  totalSteps: viewModel.hasCustomFields ? 5 : 4,
+                ),
 
                 Expanded(
                   child: SingleChildScrollView(

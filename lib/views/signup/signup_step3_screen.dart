@@ -66,7 +66,10 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
             return Column(
               children: [
                 // Step Indicator
-                StepIndicator(currentStep: 3, totalSteps: 4),
+                StepIndicator(
+                  currentStep: 3,
+                  totalSteps: viewModel.hasCustomFields ? 5 : 4,
+                ),
                 
                 // Form Content
                 Expanded(

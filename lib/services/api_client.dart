@@ -8,9 +8,9 @@ import 'api_endpoints.dart';
 class ApiClient {
   /// Base headers for JSON requests
   static Map<String, String> get _defaultHeaders => {
-        'Content-Type': ApiContentType.json,
-        'Accept': ApiContentType.json,
-      };
+    'Content-Type': ApiContentType.json,
+    'Accept': ApiContentType.json,
+  };
 
   /// Get authorization header
   static Map<String, String> _getHeaders({String? token}) {
@@ -22,11 +22,11 @@ class ApiClient {
   }
 
   /// Make a GET request
-  /// 
+  ///
   /// [endpoint] - API endpoint path (e.g., '/profile')
   /// [queryParameters] - Optional query parameters as key-value pairs
   /// [token] - Optional authentication token
-  /// 
+  ///
   /// Returns [ApiResponse] containing success status, data, and message
   static Future<ApiResponse> get(
     String endpoint, {
@@ -67,11 +67,11 @@ class ApiClient {
   }
 
   /// Make a POST request
-  /// 
+  ///
   /// [endpoint] - API endpoint path (e.g., '/register')
   /// [body] - Request body as key-value pairs (will be converted to JSON)
   /// [token] - Optional authentication token
-  /// 
+  ///
   /// Returns [ApiResponse] containing success status, data, and message
   static Future<ApiResponse> post(
     String endpoint, {
@@ -113,11 +113,11 @@ class ApiClient {
   }
 
   /// Make a PUT request
-  /// 
+  ///
   /// [endpoint] - API endpoint path (e.g., '/profile')
   /// [body] - Request body as key-value pairs (will be converted to JSON)
   /// [token] - Optional authentication token
-  /// 
+  ///
   /// Returns [ApiResponse] containing success status, data, and message
   static Future<ApiResponse> put(
     String endpoint, {
@@ -158,20 +158,169 @@ class ApiClient {
     }
   }
 
+  /// Make a POST request with multipart/form-data (for file uploads)
+  ///
+  /// [endpoint] - API endpoint path (e.g., '/register/step-5')
+  /// [fields] - Form fields as key-value pairs
+  /// [fileField] - Field name for the file (e.g., 'field_1_driving_license')
+  /// [file] - File to upload
+  /// [token] - Optional authentication token
+  ///
+  /// Returns [ApiResponse] containing success status, data, and message
+  static Future<ApiResponse> postMultipart(
+    String endpoint, {
+    Map<String, String>? fields,
+    String? fileField,
+    File? file,
+    Map<String, File>? files, // Multiple files with field names as keys
+    String? token,
+  }) async {
+    try {
+      // Build URL
+      final url = ApiEndpoints.buildUrl(endpoint);
+
+      // Create multipart request
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // Add authorization header
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.headers['Accept'] = ApiContentType.json;
+
+      // Add form fields
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      // Helper function to add a file
+      Future<void> addFile(String fieldName, File fileToAdd) async {
+        // Verify file exists
+        if (!await fileToAdd.exists()) {
+          throw Exception('File does not exist: ${fileToAdd.path}');
+        }
+
+        final fileLength = await fileToAdd.length();
+        if (fileLength == 0) {
+          throw Exception('File is empty: ${fileToAdd.path}');
+        }
+
+        // Extract filename - handle both Windows (\) and Unix (/) paths
+        final pathSeparator = Platform.isWindows ? '\\' : '/';
+        final filename = fileToAdd.path.split(pathSeparator).last;
+
+        // Determine content type based on file extension
+        http.MediaType? contentType;
+        if (filename.contains('.')) {
+          final extension = filename.toLowerCase().split('.').last;
+          switch (extension) {
+            case 'jpg':
+            case 'jpeg':
+              contentType = http.MediaType('image', 'jpeg');
+              break;
+            case 'png':
+              contentType = http.MediaType('image', 'png');
+              break;
+            case 'pdf':
+              contentType = http.MediaType('application', 'pdf');
+              break;
+            case 'doc':
+            case 'docx':
+              contentType = http.MediaType('application', 'msword');
+              break;
+            case 'txt':
+              contentType = http.MediaType('text', 'plain');
+              break;
+            default:
+              contentType = http.MediaType('application', 'octet-stream');
+          }
+        } else {
+          contentType = http.MediaType('application', 'octet-stream');
+        }
+
+        final multipartFile = await http.MultipartFile.fromPath(
+          fieldName,
+          fileToAdd.path,
+          filename: filename,
+          contentType: contentType,
+        );
+        request.files.add(multipartFile);
+      }
+
+      // Add multiple files if provided
+      if (files != null && files.isNotEmpty) {
+        for (var entry in files.entries) {
+          try {
+            await addFile(entry.key, entry.value);
+          } catch (e) {
+            return ApiResponse.error(
+              'Failed to attach file ${entry.key}: ${e.toString()}',
+              statusCode: 0,
+            );
+          }
+        }
+      }
+      // Legacy: Add single file if provided (for backward compatibility)
+      else if (fileField != null && file != null) {
+        try {
+          await addFile(fileField, file);
+        } catch (e) {
+          return ApiResponse.error(
+            'Failed to attach file: ${e.toString()}',
+            statusCode: 0,
+          );
+        }
+      }
+
+      // Verify file was added if it was supposed to be
+      if (((fileField != null && file != null) ||
+              (files != null && files.isNotEmpty)) &&
+          request.files.isEmpty) {
+        return ApiResponse.error(
+          'Failed to attach file to request',
+          statusCode: 0,
+        );
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      // Handle and return response
+      return _handleResponse(response);
+    } on http.ClientException catch (e) {
+      return ApiResponse.error(
+        'Network error: Unable to connect to server. Please check your internet connection.',
+        statusCode: 0,
+      );
+    } on FormatException catch (e) {
+      return ApiResponse.error(
+        'Invalid response format: ${e.message}',
+        statusCode: 0,
+      );
+    } catch (e) {
+      return ApiResponse.error(
+        'Unexpected error: ${e.toString()}',
+        statusCode: 0,
+      );
+    }
+  }
+
   /// Make a PUT request with multipart/form-data (for file uploads)
-  /// 
+  ///
   /// [endpoint] - API endpoint path (e.g., '/profile')
   /// [fields] - Form fields as key-value pairs
   /// [fileField] - Field name for the file (e.g., 'profile_image')
   /// [file] - File to upload
   /// [token] - Optional authentication token
-  /// 
+  ///
   /// Returns [ApiResponse] containing success status, data, and message
   static Future<ApiResponse> putMultipart(
     String endpoint, {
     Map<String, String>? fields,
     String? fileField,
     File? file,
+    Map<String, File>? files, // Multiple files with field names as keys
     String? token,
   }) async {
     try {
@@ -192,61 +341,80 @@ class ApiClient {
         request.fields.addAll(fields);
       }
 
-      // Add file if provided
-      if (fileField != null && file != null) {
+      // Helper function to add a file
+      Future<void> addFile(String fieldName, File fileToAdd) async {
+        // Verify file exists
+        if (!await fileToAdd.exists()) {
+          throw Exception('File does not exist: ${fileToAdd.path}');
+        }
+
+        final fileLength = await fileToAdd.length();
+        if (fileLength == 0) {
+          throw Exception('File is empty: ${fileToAdd.path}');
+        }
+
+        // Extract filename - handle both Windows (\) and Unix (/) paths
+        final pathSeparator = Platform.isWindows ? '\\' : '/';
+        final filename = fileToAdd.path.split(pathSeparator).last;
+
+        // Determine content type based on file extension
+        http.MediaType? contentType;
+        if (filename.contains('.')) {
+          final extension = filename.toLowerCase().split('.').last;
+          switch (extension) {
+            case 'jpg':
+            case 'jpeg':
+              contentType = http.MediaType('image', 'jpeg');
+              break;
+            case 'png':
+              contentType = http.MediaType('image', 'png');
+              break;
+            case 'pdf':
+              contentType = http.MediaType('application', 'pdf');
+              break;
+            case 'doc':
+            case 'docx':
+              contentType = http.MediaType('application', 'msword');
+              break;
+            case 'txt':
+              contentType = http.MediaType('text', 'plain');
+              break;
+            case 'gif':
+              contentType = http.MediaType('image', 'gif');
+              break;
+            default:
+              contentType = http.MediaType('application', 'octet-stream');
+          }
+        } else {
+          contentType = http.MediaType('application', 'octet-stream');
+        }
+
+        final multipartFile = await http.MultipartFile.fromPath(
+          fieldName,
+          fileToAdd.path,
+          filename: filename,
+          contentType: contentType,
+        );
+        request.files.add(multipartFile);
+      }
+
+      // Add multiple files if provided
+      if (files != null && files.isNotEmpty) {
+        for (var entry in files.entries) {
+          try {
+            await addFile(entry.key, entry.value);
+          } catch (e) {
+            return ApiResponse.error(
+              'Failed to attach file ${entry.key}: ${e.toString()}',
+              statusCode: 0,
+            );
+          }
+        }
+      }
+      // Legacy: Add single file if provided (for backward compatibility)
+      else if (fileField != null && file != null) {
         try {
-          // Verify file exists
-          if (!await file.exists()) {
-            return ApiResponse.error(
-              'File does not exist: ${file.path}',
-              statusCode: 0,
-            );
-          }
-          
-          final fileLength = await file.length();
-          if (fileLength == 0) {
-            return ApiResponse.error(
-              'File is empty: ${file.path}',
-              statusCode: 0,
-            );
-          }
-          
-          // // Open file stream
-          // final fileStream = file.openRead();
-          
-          // Extract filename - handle both Windows (\) and Unix (/) paths
-          final pathSeparator = Platform.isWindows ? '\\' : '/';
-          final filename = file.path.split(pathSeparator).last;
-          
-          // Determine content type based on file extension
-          http.MediaType? contentType;
-          if (filename.contains('.')) {
-            final extension = filename.toLowerCase().split('.').last;
-            switch (extension) {
-              case 'jpg':
-              case 'jpeg':
-                contentType = http.MediaType('image', 'jpeg');
-                break;
-              case 'png':
-                contentType = http.MediaType('image', 'png');
-                break;
-              case 'gif':
-                contentType = http.MediaType('image', 'gif');
-                break;
-              default:
-                contentType = http.MediaType('image', 'jpeg'); // Default
-            }
-          } else {
-            contentType = http.MediaType('image', 'jpeg'); // Default if no extension
-          }
-          
-          final multipartFile = await http.MultipartFile.fromPath(
-            fileField!,
-            file.path,
-            filename: filename,
-            contentType: contentType,
-          );
-          request.files.add(multipartFile);
+          await addFile(fileField, file);
         } catch (e) {
           return ApiResponse.error(
             'Failed to attach file: ${e.toString()}',
@@ -256,7 +424,9 @@ class ApiClient {
       }
 
       // Verify file was added if it was supposed to be
-      if (fileField != null && file != null && request.files.isEmpty) {
+      if (((fileField != null && file != null) ||
+              (files != null && files.isNotEmpty)) &&
+          request.files.isEmpty) {
         return ApiResponse.error(
           'Failed to attach file to request',
           statusCode: 0,
@@ -346,7 +516,10 @@ class ApiClient {
   }
 
   /// Extract success message from response data
-  static String _extractMessage(Map<String, dynamic> data, {required bool isSuccess}) {
+  static String _extractMessage(
+    Map<String, dynamic> data, {
+    required bool isSuccess,
+  }) {
     if (data.containsKey('message')) {
       return data['message'].toString();
     }
@@ -360,14 +533,17 @@ class ApiClient {
   }
 
   /// Extract error message from response data
-  static String _extractErrorMessage(Map<String, dynamic> data, int statusCode) {
+  static String _extractErrorMessage(
+    Map<String, dynamic> data,
+    int statusCode,
+  ) {
     // Try different error message formats
-    
+
     // Format 1: Direct message field
     if (data.containsKey('message')) {
       return data['message'].toString();
     }
-    
+
     // Format 2: Error field
     if (data.containsKey('error')) {
       final error = data['error'];
@@ -377,7 +553,7 @@ class ApiClient {
         return error['message']?.toString() ?? 'An error occurred';
       }
     }
-    
+
     // Format 3: Laravel validation errors format
     if (data.containsKey('errors')) {
       final errors = data['errors'];
@@ -385,7 +561,7 @@ class ApiClient {
         // Get first error from validation errors
         final firstErrorKey = errors.keys.first;
         final firstErrorValue = errors[firstErrorKey];
-        
+
         if (firstErrorValue is List && firstErrorValue.isNotEmpty) {
           return firstErrorValue.first.toString();
         } else if (firstErrorValue is String) {
@@ -393,16 +569,16 @@ class ApiClient {
         }
       }
     }
-    
+
     // Format 4: Check for common error fields
     if (data.containsKey('error_message')) {
       return data['error_message'].toString();
     }
-    
+
     if (data.containsKey('errorMessage')) {
       return data['errorMessage'].toString();
     }
-    
+
     // Default error message based on status code
     switch (statusCode) {
       case 400:
@@ -484,7 +660,7 @@ class ApiResponse {
   T? getNestedField<T>(String path) {
     final keys = path.split('.');
     dynamic value = data;
-    
+
     for (final key in keys) {
       if (value is Map<String, dynamic> && value.containsKey(key)) {
         value = value[key];
@@ -492,7 +668,7 @@ class ApiResponse {
         return null;
       }
     }
-    
+
     return value as T?;
   }
 

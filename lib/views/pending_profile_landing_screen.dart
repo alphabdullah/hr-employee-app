@@ -6,8 +6,22 @@ import '../routes/route_names.dart';
 import '../utils/screen_unit_util.dart';
 import '../viewmodels/signup_viewmodel.dart';
 
-class PendingProfileLandingScreen extends StatelessWidget {
+class PendingProfileLandingScreen extends StatefulWidget {
   const PendingProfileLandingScreen({super.key});
+
+  @override
+  State<PendingProfileLandingScreen> createState() => _PendingProfileLandingScreenState();
+}
+
+class _PendingProfileLandingScreenState extends State<PendingProfileLandingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch custom fields when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SignUpViewModel>().fetchCustomFields();
+    });
+  }
 
   void _navigateToStep(BuildContext context, int step) {
     final route = {
@@ -15,6 +29,7 @@ class PendingProfileLandingScreen extends StatelessWidget {
       2: RouteNames.signUpStep2,
       3: RouteNames.signUpStep3,
       4: RouteNames.signUpStep4,
+      5: RouteNames.signUpStep5,
     }[step];
 
     if (route == null) return;
@@ -35,41 +50,56 @@ class PendingProfileLandingScreen extends StatelessWidget {
         title: const Text('Complete your profile'),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(24)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const StepIndicator(currentStep: 1, totalSteps: 4),
-              SizedBox(height: ScreenUnitUtil.getSpacing(16)),
-              Text(
-                'Your account is still pending for approval. You can still update your profile information.',
-                style: TextStyle(
-                  fontSize: ScreenUnitUtil.getFontSize(16),
-                ),
+        child: Consumer<SignUpViewModel>(
+          builder: (context, viewModel, child) {
+            // Determine total steps based on custom fields
+            final totalSteps = viewModel.hasCustomFields ? 5 : 4;
+            
+            return Padding(
+              padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(24)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  StepIndicator(currentStep: 1, totalSteps: totalSteps),
+                  SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+                  Text(
+                    'Your account is still pending for approval. You can still update your profile information.',
+                    style: TextStyle(
+                      fontSize: ScreenUnitUtil.getFontSize(16),
+                    ),
+                  ),
+                  SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  PrimaryButton(
+                    text: 'Profile (Step 1)',
+                    onPressed: () => _navigateToStep(context, 1),
+                  ),
+                  SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  PrimaryButton(
+                    text: 'Compliance (Step 2)',
+                    onPressed: () => _navigateToStep(context, 2),
+                  ),
+                  SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  PrimaryButton(
+                    text: 'Availability (Step 3)',
+                    onPressed: () => _navigateToStep(context, 3),
+                  ),
+                  SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  PrimaryButton(
+                    text: 'Bank Details (Step 4)',
+                    onPressed: () => _navigateToStep(context, 4),
+                  ),
+                  // Show Step 5 button if custom fields exist
+                  if (viewModel.hasCustomFields && viewModel.customFields.isNotEmpty) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    PrimaryButton(
+                      text: 'Additional Information (Step 5)',
+                      onPressed: () => _navigateToStep(context, 5),
+                    ),
+                  ],
+                ],
               ),
-              SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-              PrimaryButton(
-                text: 'Profile (Step 1)',
-                onPressed: () => _navigateToStep(context, 1),
-              ),
-              SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-              PrimaryButton(
-                text: 'Compliance (Step 2)',
-                onPressed: () => _navigateToStep(context, 2),
-              ),
-              SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-              PrimaryButton(
-                text: 'Availability (Step 3)',
-                onPressed: () => _navigateToStep(context, 3),
-              ),
-              SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-              PrimaryButton(
-                text: 'Bank Details (Step 4)',
-                onPressed: () => _navigateToStep(context, 4),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

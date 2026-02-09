@@ -9,6 +9,7 @@ import '../views/signup/signup_step3_screen.dart';
 import '../views/signup/declaration_screen.dart';
 import '../views/signup/terms_conditions_screen.dart';
 import '../views/signup/signup_step4_screen.dart';
+import '../views/signup/signup_step5_screen.dart';
 import '../views/forgot_password_screen.dart';
 import '../views/main_tab_screen.dart';
 import '../views/job_detail_screen.dart';
@@ -85,6 +86,13 @@ class AppRouter {
         final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
         return MaterialPageRoute(
           builder: (_) => SignUpStep4Screen(isEditMode: isEditMode),
+          settings: settings,
+        );
+
+      case RouteNames.signUpStep5:
+        final isEditMode = args is Map<String, dynamic> ? (args['isEditMode'] as bool?) ?? false : false;
+        return MaterialPageRoute(
+          builder: (_) => SignUpStep5Screen(isEditMode: isEditMode),
           settings: settings,
         );
 

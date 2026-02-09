@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../models/register_flow_models.dart';
 import '../services/api_client.dart';
@@ -10,7 +11,7 @@ import '../services/auth_service.dart';
 /// ViewModel for multi-step SignUp screen following MVVM pattern
 class SignUpViewModel extends ChangeNotifier {
   // Step tracking
-  int _currentStep = 1; // 1, 2, 3, or 4
+  int _currentStep = 1; // 1, 2, 3, 4, or 5
   String? _registrationToken; // Token from Step 1 response
 
   // Edit mode flag
@@ -21,6 +22,12 @@ class SignUpViewModel extends ChangeNotifier {
   RegisterStep2Model _step2Model = RegisterStep2Model.empty();
   RegisterStep3Model _step3Model = RegisterStep3Model.empty();
   RegisterStep4Model _step4Model = RegisterStep4Model.empty();
+  RegisterStep5Model _step5Model = RegisterStep5Model.empty();
+
+  // Custom fields
+  List<CustomFieldModel> _customFields = [];
+  bool _hasCustomFields = false;
+  bool _isLoadingCustomFields = false;
 
   // Loading and error states
   bool _isLoading = false;
@@ -44,11 +51,21 @@ class SignUpViewModel extends ChangeNotifier {
   RegisterStep2Model get step2Model => _step2Model;
   RegisterStep3Model get step3Model => _step3Model;
   RegisterStep4Model get step4Model => _step4Model;
+  RegisterStep5Model get step5Model => _step5Model;
+  List<CustomFieldModel> get customFields => _customFields;
+  bool get hasCustomFields => _hasCustomFields;
+  bool get isLoadingCustomFields => _isLoadingCustomFields;
   bool get isLoading => _isLoading;
   bool get isStepLoading => _isStepLoading;
   bool get isLoadingProfile => _isLoadingProfile;
   String? get errorMessage => _errorMessage;
-  bool get canGoNext => _currentStep < 4;
+  bool get canGoNext {
+    if (_hasCustomFields) {
+      return _currentStep < 5;
+    }
+    return _currentStep < 4;
+  }
+
   bool get canGoBack => _currentStep > 1;
   bool get declarationAgreed => _declarationAgreed;
   bool get termsConditionsAgreed => _termsConditionsAgreed;
@@ -77,7 +94,8 @@ class SignUpViewModel extends ChangeNotifier {
 
   /// Navigate to next step
   void nextStep() {
-    if (_currentStep < 4) {
+    final maxStep = _hasCustomFields ? 5 : 4;
+    if (_currentStep < maxStep) {
       _currentStep++;
       _errorMessage = null;
       notifyListeners();
@@ -95,7 +113,8 @@ class SignUpViewModel extends ChangeNotifier {
 
   /// Go to specific step
   void goToStep(int step) {
-    if (step >= 1 && step <= 4) {
+    final maxStep = _hasCustomFields ? 5 : 4;
+    if (step >= 1 && step <= maxStep) {
       _currentStep = step;
       _errorMessage = null;
       notifyListeners();
@@ -801,11 +820,318 @@ class SignUpViewModel extends ChangeNotifier {
       _isStepLoading = false;
 
       if (response.isSuccess) {
+        // Don't complete registration here - let Step 4 screen check for custom fields
+        // and navigate accordingly. The registration will be completed in Step 5 if it exists,
+        // or in Step 4 screen if no custom fields exist.
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.message;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isStepLoading = false;
+      _errorMessage = 'An error occurred. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // STEP 5: Custom Fields
+  // ============================================================================
+
+  /// Fetch custom fields from API
+  Future<void> fetchCustomFields({bool forceRefresh = false}) async {
+    // Don't fetch again if already loaded and has fields (unless force refresh)
+    if (!forceRefresh && _customFields.isNotEmpty && _hasCustomFields) {
+      debugPrint(
+        'Custom fields already loaded (${_customFields.length} fields), skipping fetch',
+      );
+      return;
+    }
+
+    _isLoadingCustomFields = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // Get token - use registration token if available, otherwise try auth token
+      String? tokenToUse = _registrationToken;
+      if (tokenToUse == null || tokenToUse.isEmpty) {
+        tokenToUse = await AuthService.getToken();
+      }
+
+      final url = ApiEndpoints.buildUrl(ApiEndpoints.getCustomFields);
+      debugPrint('Fetching custom fields from: $url');
+      debugPrint(
+        'Using token: ${tokenToUse != null ? "Yes (${tokenToUse.substring(0, 20)}...)" : "No"}',
+      );
+
+      final response = await ApiClient.get(
+        ApiEndpoints.getCustomFields,
+        token: tokenToUse,
+      );
+      debugPrint('Custom fields response status: ${response.statusCode}');
+      debugPrint('Custom fields response isSuccess: ${response.isSuccess}');
+      debugPrint('Custom fields response data: ${response.data}');
+      debugPrint(
+        'Custom fields response data type: ${response.data.runtimeType}',
+      );
+
+      _isLoadingCustomFields = false;
+
+      if (response.isSuccess) {
+        final data = response.data;
+        List<dynamic> fieldsList = [];
+
+        // Handle response structure - data is always a Map<String, dynamic>
+        // Response format: {"profile_fields": [...]} or {"data": {"profile_fields": [...]}}
+        debugPrint('Response data type: ${data.runtimeType}');
+        debugPrint('Response data keys: ${data.keys.toList()}');
+        debugPrint('Full response data: $data');
+
+        // Check if response is wrapped in 'data' key
+        Map<String, dynamic> dataToUse = data;
+        if (data.containsKey('data') && data['data'] is Map) {
+          dataToUse = data['data'] as Map<String, dynamic>;
+          debugPrint(
+            'Response wrapped in data key, unwrapped keys: ${dataToUse.keys.toList()}',
+          );
+        }
+
+        final profileFieldsValue = dataToUse['profile_fields'];
+        debugPrint('profile_fields value: $profileFieldsValue');
+        debugPrint('profile_fields type: ${profileFieldsValue.runtimeType}');
+
+        if (profileFieldsValue is List) {
+          fieldsList = profileFieldsValue;
+          debugPrint('Found ${fieldsList.length} custom fields');
+          if (fieldsList.isNotEmpty) {
+            debugPrint('First field: ${fieldsList[0]}');
+          }
+        } else {
+          debugPrint(
+            'profile_fields is not a List, it is: ${profileFieldsValue.runtimeType}',
+          );
+          debugPrint('profile_fields value: $profileFieldsValue');
+        }
+
+        // Sort fields by sort_order
+        try {
+          _customFields = fieldsList.map((field) {
+            try {
+              debugPrint('Parsing field: $field');
+              final parsedField = CustomFieldModel.fromJson(
+                field as Map<String, dynamic>,
+              );
+              debugPrint(
+                'Parsed field - id: ${parsedField.id}, label: ${parsedField.label}, type: ${parsedField.type}',
+              );
+              return parsedField;
+            } catch (e) {
+              debugPrint('Error parsing field: $e, field data: $field');
+              rethrow;
+            }
+          }).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+          _hasCustomFields = _customFields.isNotEmpty;
+          debugPrint(
+            '✅ Custom fields loaded successfully: ${_customFields.length} fields',
+          );
+          debugPrint('✅ hasCustomFields flag: $_hasCustomFields');
+          if (_customFields.isNotEmpty) {
+            debugPrint(
+              '✅ Field labels: ${_customFields.map((f) => f.label).join(", ")}',
+            );
+          }
+          _errorMessage = null;
+          notifyListeners();
+        } catch (e) {
+          debugPrint('❌ Error processing custom fields: $e');
+          _customFields = [];
+          _hasCustomFields = false;
+          _errorMessage = null;
+          notifyListeners();
+        }
+      } else {
+        // If API returns error or empty, assume no custom fields
+        debugPrint(
+          'API returned error or not success. Message: ${response.message}',
+        );
+        _customFields = [];
+        _hasCustomFields = false;
+        _errorMessage = null;
+        notifyListeners();
+      }
+    } catch (e, stackTrace) {
+      _isLoadingCustomFields = false;
+      // On error, assume no custom fields (don't block registration)
+      _customFields = [];
+      _hasCustomFields = false;
+      debugPrint('Error fetching custom fields: $e');
+      debugPrint('Stack trace: $stackTrace');
+      notifyListeners();
+    }
+  }
+
+  void updateStep5Field(int fieldId, dynamic value) {
+    _step5Model.setFieldValue(fieldId, value);
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Submit Step 5 - Custom Fields (Final Step if custom fields exist)
+  Future<bool> submitStep5({Map<int, File>? files}) async {
+    // If in edit mode, use update method instead
+    if (_isEditMode) {
+      return await updateStep5(files: files);
+    }
+
+    // Use registration token if available, otherwise try auth token
+    String? tokenToUse = _registrationToken;
+    if (tokenToUse == null || tokenToUse.isEmpty) {
+      tokenToUse = await AuthService.getToken();
+      if (tokenToUse == null || tokenToUse.isEmpty) {
+        _errorMessage = 'Please complete Step 1 first or login';
+        notifyListeners();
+        return false;
+      }
+    }
+
+    _isStepLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final payload = _step5Model.toJson();
+      debugPrint('Submitting Step 5: $payload');
+
+      // Convert files map from field ID to field name format (fields[<id>])
+      Map<String, File>? filesForApi;
+      if (files != null && files.isNotEmpty) {
+        filesForApi = {};
+        for (var entry in files.entries) {
+          filesForApi['fields[${entry.key}]'] = entry.value;
+        }
+      }
+
+      // Separate text fields from file fields
+      // Get list of document field IDs to exclude from text payload
+      final documentFieldIds = _customFields
+          .where((f) => f.type.toLowerCase() == 'document')
+          .map((f) => f.id)
+          .toSet();
+
+      final formFields = <String, String>{};
+      for (var entry in payload.entries) {
+        // Extract field ID from key format "fields[<id>]"
+        final match = RegExp(r'fields\[(\d+)\]').firstMatch(entry.key);
+        if (match != null) {
+          final fieldId = int.parse(match.group(1)!);
+          // Skip document fields (they'll be added as files)
+          if (!documentFieldIds.contains(fieldId) &&
+              (filesForApi == null || !filesForApi.containsKey(entry.key))) {
+            formFields[entry.key] = entry.value.toString();
+          }
+        }
+      }
+
+      // Always use multipart POST (API expects form-data)
+      final response = await ApiClient.postMultipart(
+        ApiEndpoints.registerStep5,
+        token: tokenToUse,
+        fields: formFields,
+        files: filesForApi,
+      );
+      debugPrint('Step 5 response: ${response.statusCode} ${response.data}');
+
+      _isStepLoading = false;
+
+      if (response.isSuccess) {
         // Registration complete - save token to AuthService if we used registration token
-        // If we used auth token, it's already saved
         if (_registrationToken != null && _registrationToken!.isNotEmpty) {
           await AuthService.saveToken(_registrationToken!);
         }
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.message;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isStepLoading = false;
+      _errorMessage = 'An error occurred. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Update Step 5 - Custom Fields (for edit mode)
+  Future<bool> updateStep5({Map<int, File>? files}) async {
+    final token = await AuthService.getToken();
+    if (token == null || token.isEmpty) {
+      _errorMessage = 'Please login to update custom fields';
+      notifyListeners();
+      return false;
+    }
+
+    _isStepLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final payload = _step5Model.toJson();
+      debugPrint('Updating Step 5: $payload');
+
+      // Convert files map from field ID to field name format (fields[<id>])
+      Map<String, File>? filesForApi;
+      if (files != null && files.isNotEmpty) {
+        filesForApi = {};
+        for (var entry in files.entries) {
+          filesForApi['fields[${entry.key}]'] = entry.value;
+        }
+      }
+
+      // Separate text fields from file fields
+      // Get list of document field IDs to exclude from text payload
+      final documentFieldIds = _customFields
+          .where((f) => f.type.toLowerCase() == 'document')
+          .map((f) => f.id)
+          .toSet();
+
+      final formFields = <String, String>{};
+      for (var entry in payload.entries) {
+        // Extract field ID from key format "fields[<id>]"
+        final match = RegExp(r'fields\[(\d+)\]').firstMatch(entry.key);
+        if (match != null) {
+          final fieldId = int.parse(match.group(1)!);
+          // Skip document fields (they'll be added as files)
+          if (!documentFieldIds.contains(fieldId) &&
+              (filesForApi == null || !filesForApi.containsKey(entry.key))) {
+            formFields[entry.key] = entry.value.toString();
+          }
+        }
+      }
+
+      // Always use multipart POST (API expects form-data, only POST is supported)
+      final response = await ApiClient.postMultipart(
+        ApiEndpoints.registerStep5,
+        token: token,
+        fields: formFields,
+        files: filesForApi,
+      );
+      debugPrint(
+        'Update Step 5 response: ${response.statusCode} ${response.data}',
+      );
+
+      _isStepLoading = false;
+
+      if (response.isSuccess) {
         _errorMessage = null;
         notifyListeners();
         return true;
@@ -1217,12 +1543,18 @@ class SignUpViewModel extends ChangeNotifier {
     _step2Model = RegisterStep2Model.empty();
     _step3Model = RegisterStep3Model.empty();
     _step4Model = RegisterStep4Model.empty();
+    _step5Model = RegisterStep5Model.empty();
+    _customFields = [];
+    _hasCustomFields = false;
+    _isLoadingCustomFields = false;
+    _declarationAgreed = false;
+    _termsConditionsAgreed = false;
     _isLoading = false;
     _isStepLoading = false;
     _isLoadingProfile = false;
     _errorMessage = null;
     _hasLoadedMeData = false;
-    notifyListeners();
     _isPostcodeLoading = false;
+    notifyListeners();
   }
 }
