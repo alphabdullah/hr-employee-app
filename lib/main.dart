@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/signup_viewmodel.dart';
@@ -14,6 +17,10 @@ import 'utils/screen_unit_util.dart';
 import 'resources/themes/app_theme.dart';
 import 'routes/app_router.dart';
 import 'firebase_options.dart';
+
+// Global instance for local notifications
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 // Top-level function for handling background messages
 @pragma('vm:entry-point')
@@ -47,6 +54,19 @@ Future<void> main() async {
   } else {
     debugPrint('FCM permission not granted: ${settings.authorizationStatus}');
   }
+
+  // Initialize local notifications
+  const AndroidInitializationSettings androidInitSettings =
+      AndroidInitializationSettings('@mipmap/launcher_icon');
+  const DarwinInitializationSettings darwinInitSettings =
+      DarwinInitializationSettings();
+  const InitializationSettings initializationSettings =
+      InitializationSettings(
+    android: androidInitSettings,
+    iOS: darwinInitSettings,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   messaging.onTokenRefresh.listen((newToken) {
     debugPrint('FCM Token refreshed: $newToken');
@@ -91,6 +111,8 @@ class _MyAppState extends State<MyApp> {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('Received foreground message: ${message.messageId}');
       debugPrint('Message data: ${message.data}');
+
+      _showForegroundNotification(message);
       
       // Refresh notifications when a push notification is received
       // Access NotificationViewModel through navigator context
@@ -113,6 +135,41 @@ class _MyAppState extends State<MyApp> {
         notificationViewModel.loadNotifications(forceRefresh: true);
       }
     });
+  }
+
+  Future<void> _showForegroundNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    final title = notification?.title ?? message.data['title']?.toString();
+    final body = notification?.body ?? message.data['body']?.toString();
+
+    if (title == null && body == null) {
+      return;
+    }
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'hr_employee_app_channel',
+      'HR Notifications',
+      channelDescription: 'Notifications for HR Employee App',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      notification.hashCode,
+      title,
+      body,
+      notificationDetails,
+      payload:
+          message.data.isNotEmpty ? jsonEncode(message.data) : null,
+    );
   }
 
   @override

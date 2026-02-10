@@ -55,18 +55,56 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
     final step1 = viewModel.step1Model;
     final p46 = viewModel.step5P46Model;
 
-    _niController.text = p46.natInsuranceNo ?? step1.natInsuranceNo ?? '';
-    _titleController.text = p46.title ?? '';
-    _surnameController.text = p46.surname ?? step1.surname;
-    _firstNameController.text = p46.firstName ?? step1.name;
-    _dobController.text = (p46.dob ?? step1.dob ?? '').toString();
-    _postcodeController.text = p46.postcode ?? step1.postCode ?? '';
-    _houseFlatController.text = p46.houseFlatNumber ?? '';
-    _restOfAddressController.text = p46.restOfAddress ?? step1.address ?? '';
+    // Read existing values from the models (P46 model has priority, then step 1)
+    final natInsuranceNo = (p46.natInsuranceNo ?? step1.natInsuranceNo) ?? '';
+    final title = p46.title ?? '';
+    final surname = p46.surname ?? step1.surname;
+    final firstName = p46.firstName ?? step1.name;
+    final dob = (p46.dob ?? step1.dob ?? '');
+    final postcode = (p46.postcode ?? step1.postCode) ?? '';
+    final houseFlatNumber = p46.houseFlatNumber ?? '';
+    final restOfAddress = (p46.restOfAddress ?? step1.address) ?? '';
+    final gender = p46.gender ?? step1.gender;
+    final optionAbc = p46.optionAbc;
+    final optionD = p46.optionD ?? false;
 
-    _selectedGender = p46.gender ?? step1.gender;
-    _selectedOptionAbc = p46.optionAbc;
-    _optionD = p46.optionD ?? false;
+    // Populate controllers / local state
+    _niController.text = natInsuranceNo;
+    _titleController.text = title;
+    _surnameController.text = surname;
+    _firstNameController.text = firstName;
+    _dobController.text = dob.toString();
+    _postcodeController.text = postcode;
+    _houseFlatController.text = houseFlatNumber;
+    _restOfAddressController.text = restOfAddress;
+    _selectedGender = gender;
+    _selectedOptionAbc = optionAbc;
+    _optionD = optionD;
+
+    // Seed the P46 model so that all current values (including prefilled ones)
+    // are present in the view model before any user edits. This ensures that
+    // submitStep5P46() / updateStep5P46() send a complete body even if the
+    // user does not change some of the prefilled fields.
+    viewModel
+      ..updateStep5P46NatInsuranceNo(
+        natInsuranceNo.trim().isEmpty ? null : natInsuranceNo.trim(),
+      )
+      ..updateStep5P46Title(title.trim().isEmpty ? null : title.trim())
+      ..updateStep5P46Surname(surname.trim().isEmpty ? null : surname.trim())
+      ..updateStep5P46FirstName(firstName.trim().isEmpty ? null : firstName.trim())
+      ..updateStep5P46Dob(dob.isEmpty ? null : dob)
+      ..updateStep5P46Postcode(
+        postcode.trim().isEmpty ? null : postcode.trim(),
+      )
+      ..updateStep5P46HouseFlatNumber(
+        houseFlatNumber.trim().isEmpty ? null : houseFlatNumber.trim(),
+      )
+      ..updateStep5P46RestOfAddress(
+        restOfAddress.trim().isEmpty ? null : restOfAddress.trim(),
+      )
+      ..updateStep5P46Gender(gender)
+      ..updateStep5P46OptionAbc(optionAbc)
+      ..updateStep5P46OptionD(optionD);
 
     setState(() {});
   }
@@ -136,7 +174,51 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
                     ),
                     SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                    // Your details
+                    Text(
+                      'HM Revenue & Customs',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(16),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(4)),
+                    Text(
+                      'P46: Employee without a Form P45',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(14),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    Text(
+                      'Section one\n\n'
+                      'To be completed by the employee\n\n'
+                      'Please complete section one and then hand back the form to your present employer. '
+                      'If you later receive a form P45 from your previous employer, please hand it to your present employer.',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+
+                    Text(
+                      'Your present circumstances',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(16),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(4)),
+                    Text(
+                      'Please read all the following statements carefully and tick the one that applies to you.',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+
                     Text(
                       'Your details',
                       style: TextStyle(
@@ -395,15 +477,29 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
                       ),
                     ),
                     SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    Text(
+                      'If you left a course of Higher Education before last 6 April and received your first Student Loan instalment on or after 1 September 1998 and you have not fully repaid your student loan, tick box D.',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(4)),
+                    Text(
+                      '(If you are required to repay your Student Loan through your bank or building society account do not tick box D.)',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(12),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
                     CheckboxListTile(
                       value: _optionD,
                       onChanged: (val) {
                         setState(() => _optionD = val ?? false);
                         viewModel.updateStep5P46OptionD(_optionD);
                       },
-                      title: const Text(
-                        'If you left a course of Higher Education before last 6 April and received your first Student Loan instalment on or after 1 September 1998 and you have not fully repaid your student loan, tick this box.',
-                      ),
+                      title: const Text('Tick box D if the above applies to you.'),
                       controlAffinity: ListTileControlAffinity.leading,
                     ),
 
@@ -504,19 +600,28 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
                         ),
                         SizedBox(
                             width: ScreenUnitUtil.getSpacing(16)),
-                        Expanded(
+                    Expanded(
                           child: PrimaryButton(
-                            text: viewModel.hasCustomFields
-                                ? 'Next'
-                                : (widget.isEditMode
-                                    ? 'Update'
+                            text: widget.isEditMode
+                                ? 'Update'
+                                : (viewModel.hasCustomFields
+                                    ? 'Next'
                                     : 'Finish'),
                             isLoading: viewModel.isStepLoading,
                             onPressed: () => _handleSubmit(viewModel),
                           ),
-                        ),
+                        ), 
                       ],
                     ),
+                  SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+                  Text(
+                    'Regal Court, 42–44 High Street, Slough, SL1 1EL\nMobile: 07809439408',
+                    style: TextStyle(
+                      fontSize: ScreenUnitUtil.getFontSize(12),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   ],
                 ),
               ),
@@ -557,6 +662,12 @@ class _SignUpStep5ScreenState extends State<SignUpStep5Screen> {
 
     final success = await viewModel.submitStep5P46();
     if (success && mounted) {
+      if (widget.isEditMode) {
+        Navigator.pop(context, true);
+        ToastMessage.showSuccess('Tax details updated successfully', context);
+        return;
+      }
+
       if (viewModel.hasCustomFields && viewModel.customFields.isNotEmpty) {
         // Move to Step 6: Additional Information
         viewModel.goToStep(6);

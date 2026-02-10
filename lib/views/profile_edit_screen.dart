@@ -123,7 +123,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         break;
       case 4:
         // For step 4, redirect to declaration screen first
-        route = RouteNames.declaration;
+        route = RouteNames.signUpStep4;
         break;
       case 5:
         route = RouteNames.signUpStep5;

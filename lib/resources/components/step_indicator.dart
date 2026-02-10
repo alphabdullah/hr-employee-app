@@ -39,94 +39,83 @@ class StepIndicator extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: ScreenUnitUtil.getSpacing(24),
-        vertical: ScreenUnitUtil.getSpacing(16),
+        vertical: ScreenUnitUtil.getSpacing(12),
       ),
-      child: Column(
-        children: [
-          Row(
-            children: List.generate(totalSteps, (index) {
-              final step = index + 1;
-              final isActive = step == currentStep;
-              final isCompleted = step < currentStep;
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(totalSteps, (index) {
+            final step = index + 1;
+            final isActive = step == currentStep;
+            final isCompleted = step < currentStep;
+            final circleSize = ScreenUnitUtil.getFontSize(isActive ? 38 : 30);
+            final stepTitle = _getStepTitle(step);
 
-              return Expanded(
-                child: Row(
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Container(
-                            width: ScreenUnitUtil.getFontSize(32),
-                            height: ScreenUnitUtil.getFontSize(32),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isCompleted || isActive
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.surfaceVariant,
-                            ),
-                            child: Center(
-                              child: isCompleted
-                                  ? Icon(
-                                      Icons.check,
-                                      color: Theme.of(context).colorScheme.onPrimary,
-                                      size: ScreenUnitUtil.getFontSize(20),
-                                    )
-                                  : Text(
-                                      '$step',
-                                      style: TextStyle(
-                                        color: isActive
-                                            ? Theme.of(context).colorScheme.onPrimary
-                                            : Theme.of(context).colorScheme.onSurfaceVariant,
-                                        fontSize: ScreenUnitUtil.getFontSize(14),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          SizedBox(height: ScreenUnitUtil.getSpacing(4)),
-                          Text(
-                            _getStepTitle(step),
-                            style: TextStyle(
-                              fontSize: ScreenUnitUtil.getFontSize(10),
-                              color: isActive || isCompleted
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                    Container(
+                      width: circleSize,
+                      height: circleSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isCompleted || isActive
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.surfaceVariant,
+                      ),
+                      child: Center(
+                        child: isCompleted
+                            ? Icon(
+                                Icons.check,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                size: ScreenUnitUtil.getFontSize(isActive ? 22 : 20),
+                              )
+                            : Text(
+                                '$step',
+                                style: TextStyle(
+                                  color: isActive
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontSize: ScreenUnitUtil.getFontSize(isActive ? 16 : 14),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
-                    if (index < totalSteps - 1)
-                      Expanded(
-                        child: Container(
-                          height: 2,
-                          margin: EdgeInsets.symmetric(
-                            horizontal: ScreenUnitUtil.getSpacing(4),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(4)),
+                    if (isActive)
+                      SizedBox(
+                        width: circleSize + ScreenUnitUtil.getSpacing(12),
+                        child: Text(
+                          stepTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: ScreenUnitUtil.getFontSize(10),
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
                           ),
-                          decoration: BoxDecoration(
-                            color: isCompleted
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.surfaceVariant,
-                          ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                   ],
                 ),
-              );
-            }),
-          ),
-          SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-          Text(
-            'Step $currentStep of $totalSteps',
-            style: TextStyle(
-              fontSize: ScreenUnitUtil.getFontSize(12),
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+                if (index < totalSteps - 1)
+                  Container(
+                    width: ScreenUnitUtil.getSpacing(18),
+                    height: 2,
+                    margin: EdgeInsets.symmetric(horizontal: ScreenUnitUtil.getSpacing(4)),
+                    color: isCompleted
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.surfaceVariant,
+                  ),
+              ],
+            );
+          }),
+        ),
       ),
     );
   }
