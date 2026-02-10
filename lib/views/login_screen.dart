@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/login_viewmodel.dart';
+import '../viewmodels/signup_viewmodel.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
 import '../resources/components/primary_button.dart';
@@ -336,6 +337,15 @@ class _LoginScreenState extends State<LoginScreen> {
         // Wait a bit for toast to show, then navigate
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
+          // Ensure custom fields are loaded so all step indicators know about Step 6
+          try {
+            final signUpViewModel =
+                Provider.of<SignUpViewModel>(context, listen: false);
+            await signUpViewModel.fetchCustomFields();
+          } catch (_) {
+            // Ignore errors here; registration flow should still work without custom fields
+          }
+
           // Check registration progress and navigate accordingly
           final registrationProgress = viewModel.registrationProgress;
           final nextStep = registrationProgress?.nextStep;
@@ -353,6 +363,10 @@ class _LoginScreenState extends State<LoginScreen> {
               case 4:
                 // If nextStep is 4, user needs to complete declarations first
                 route = RouteNames.declaration;
+                break;
+              case 5:
+                // Step 5: HMRC/Tax details (P46)
+                route = RouteNames.signUpStep5;
                 break;
               default:
                 route = RouteNames.signUpStep1;

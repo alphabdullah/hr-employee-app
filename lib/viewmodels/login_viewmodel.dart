@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/login_model.dart';
 import '../models/registration_progress_model.dart';
 import '../services/api_client.dart';
@@ -70,8 +71,18 @@ class LoginViewModel extends ChangeNotifier {
     
     try {
       // Prepare request body
-      final requestBody = _loginModel.toJson();
-      
+      final requestBody = Map<String, dynamic>.from(_loginModel.toJson());
+
+      // Add FCM device token for push notifications
+      try {
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          requestBody['fcm_token'] = fcmToken;
+        }
+      } catch (e) {
+        debugPrint('[LoginViewModel] Could not get FCM token: $e');
+      }
+
       // Make API call to login endpoint
       final response = await ApiClient.post(
         ApiEndpoints.login,
@@ -85,7 +96,9 @@ class LoginViewModel extends ChangeNotifier {
         final token = response.getField<String>('token');
         final userData = response.getField<Map<String, dynamic>>('user');
         final registrationProgressData = response.getField<Map<String, dynamic>>('registration_progress');
-        
+
+        debugPrint('[LoginViewModel] Login response token: $token');
+
         if (token != null && token.isNotEmpty) {
           final userStatus = userData?['status']?.toString().toLowerCase().trim();
 

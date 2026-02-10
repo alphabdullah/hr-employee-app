@@ -148,6 +148,17 @@ class ApiEndpoints {
   /// Example: fields[1] = "Some text", fields[2] = [file]
   static const String profileExtra = '/api/me/profile-extra';
 
+  /// User - Update Step 5 (P46 Tax Details)
+  ///
+  /// **Method:** PUT
+  /// **Path:** /api/me/step-5
+  /// **Auth:** Required (Bearer token)
+  /// **Headers:** Content-Type: application/json, Accept: application/json,
+  ///             Authorization: Bearer {token}
+  ///
+  /// **Body:** Same as Register Step 5 (P46)
+  static const String updateProfileStep5 = '/api/me/step-5';
+
   /// Legacy register endpoint (deprecated - use registerStep1 instead)
   @Deprecated('Use registerStep1 instead')
   static const String register = '/register';

@@ -994,7 +994,7 @@ class SignUpViewModel extends ChangeNotifier {
       debugPrint('Updating Step 5 (P46): $payload');
 
       final response = await ApiClient.put(
-        ApiEndpoints.registerStep5,
+        ApiEndpoints.updateProfileStep5,
         token: token,
         body: payload,
       );
@@ -1364,6 +1364,9 @@ class SignUpViewModel extends ChangeNotifier {
       if (response.isSuccess) {
         debugPrint('/api/me response: ${response.data}');
 
+        // Full raw data map for additional sections (registration_step5, profile_extra, etc.)
+        final rawData = response.data;
+
         // Parse nested structure from /api/me
         final profileData = response.getField<Map<String, dynamic>>('profile');
         final complianceData = response.getField<Map<String, dynamic>>(
@@ -1461,6 +1464,58 @@ class SignUpViewModel extends ChangeNotifier {
             accountNumber: bankDetailData['account_number'],
             sortCode: bankDetailData['sort_code'],
           );
+        }
+
+        // Populate Step 5 (P46) model from registration_step5 object
+        final registrationStep5Data =
+            rawData['registration_step5'] as Map<String, dynamic>?;
+        if (registrationStep5Data != null) {
+          debugPrint('Parsing registration_step5: $registrationStep5Data');
+          _step5P46Model = RegisterStep5P46Model(
+            natInsuranceNo: registrationStep5Data['nat_insurance_no'],
+            title: registrationStep5Data['title'],
+            surname: registrationStep5Data['surname'],
+            firstName: registrationStep5Data['first_name'],
+            gender: registrationStep5Data['gender'],
+            dob: registrationStep5Data['dob']
+                ?.toString()
+                .split('T')
+                .first,
+            postcode: registrationStep5Data['postcode'],
+            houseFlatNumber: registrationStep5Data['house_flat_number'],
+            restOfAddress: registrationStep5Data['rest_of_address'],
+            optionAbc: registrationStep5Data['option_abc'],
+            optionD: registrationStep5Data['option_d'] as bool?,
+          );
+        }
+
+        // Populate Step 6 (custom fields) values from profile_extra array
+        final profileExtraData = rawData['profile_extra'];
+        if (profileExtraData is List) {
+          debugPrint('Parsing profile_extra: $profileExtraData');
+          // Reset custom field values map
+          _step5Model = RegisterStep5Model.empty();
+
+          for (final item in profileExtraData) {
+            if (item is! Map<String, dynamic>) continue;
+
+            final fieldId = item['field_id'];
+            if (fieldId is! int) continue;
+
+            final type = (item['type'] as String?)?.toLowerCase() ?? '';
+            if (type == 'text') {
+              final value = item['value']?.toString();
+              if (value != null && value.isNotEmpty) {
+                _step5Model.setFieldValue(fieldId, value);
+              }
+            } else if (type == 'document') {
+              // For document fields, store file name for display purposes
+              final fileName = item['file_name']?.toString();
+              if (fileName != null && fileName.isNotEmpty) {
+                _step5Model.setFieldValue(fieldId, fileName);
+              }
+            }
+          }
         }
 
         _errorMessage = null;

@@ -42,10 +42,14 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final viewModel = context.read<SignUpViewModel>();
       viewModel.goToStep(6);
       viewModel.setEditMode(widget.isEditMode);
+
+       // Ensure profile data (including profile_extra) is loaded so existing values
+       // can be shown in the Additional Information screen.
+       await viewModel.loadProfileData();
 
       // If custom fields are already loaded, use them; otherwise fetch
       if (viewModel.customFields.isNotEmpty) {
