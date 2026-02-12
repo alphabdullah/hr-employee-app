@@ -183,6 +183,13 @@ class ApiEndpoints {
   /// **Auth:** Required (Bearer token)
   static const String logout = '/logout';
 
+  /// Check registration status (pending, accepted, rejected)
+  ///
+  /// **Method:** GET
+  /// **Path:** /api/me/status
+  /// **Auth:** Required (Bearer token)
+  static const String registrationStatus = '/api/me/status';
+
   // ============================================================================
   // EMAIL VERIFICATION ENDPOINTS
   // ============================================================================

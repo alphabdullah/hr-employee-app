@@ -180,22 +180,23 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App Logo or Icon
-            Icon(
-              Icons.work_outline,
-              size: ScreenUnitUtil.getFontSize(80),
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-            // App Name
-            Text(
-              'HR Employee App',
-              style: TextStyle(
-                fontSize: ScreenUnitUtil.getFontSize(24),
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
+        // App Logo or Icon
+        Image.asset(
+          'assets/icon/icon.png',
+          width: ScreenUnitUtil.getFontSize(96),
+          height: ScreenUnitUtil.getFontSize(96),
+          fit: BoxFit.contain,
+        ),
+        SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+        // App Name
+        Text(
+          'TempSpot',
+          style: TextStyle(
+            fontSize: ScreenUnitUtil.getFontSize(24),
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
             SizedBox(height: ScreenUnitUtil.getSpacing(32)),
             // Loading Indicator
             const CircularProgressIndicator(),

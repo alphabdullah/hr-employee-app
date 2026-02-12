@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../resources/components/primary_button.dart';
 import '../resources/components/step_indicator.dart';
+import '../routes/app_router.dart';
 import '../routes/route_names.dart';
+import '../services/api_client.dart';
+import '../services/api_endpoints.dart';
+import '../services/auth_service.dart';
 import '../utils/screen_unit_util.dart';
 import '../viewmodels/signup_viewmodel.dart';
 
@@ -14,6 +20,7 @@ class PendingProfileLandingScreen extends StatefulWidget {
 }
 
 class _PendingProfileLandingScreenState extends State<PendingProfileLandingScreen> {
+  Timer? _statusTimer;
   @override
   void initState() {
     super.initState();
@@ -21,6 +28,38 @@ class _PendingProfileLandingScreenState extends State<PendingProfileLandingScree
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SignUpViewModel>().fetchCustomFields();
     });
+    _startStatusPolling();
+  }
+
+  void _startStatusPolling() {
+    _statusTimer?.cancel();
+    _checkRegistrationStatus();
+    _statusTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _checkRegistrationStatus(),
+    );
+  }
+
+  Future<void> _checkRegistrationStatus() async {
+    final token = await AuthService.getToken();
+    if (token == null || token.isEmpty) return;
+
+    final response = await ApiClient.get(
+      ApiEndpoints.registrationStatus,
+      token: token,
+    );
+    debugPrint('[PendingLanding] /api/me/status statusCode=${response.statusCode} success=${response.isSuccess} data=${response.data}');
+    if (!mounted || !response.isSuccess) return;
+
+    final status = (response.getField<String>('status') ?? '').toLowerCase();
+
+    if (status == 'approved') {
+      _statusTimer?.cancel();
+      AppRouter.pushNamedAndRemoveUntil(context, RouteNames.home);
+    } else if (status == 'rejected') {
+      _statusTimer?.cancel();
+      AppRouter.pushNamedAndRemoveUntil(context, RouteNames.login);
+    }
   }
 
   void _navigateToStep(BuildContext context, int step) {
@@ -40,6 +79,12 @@ class _PendingProfileLandingScreenState extends State<PendingProfileLandingScree
       route,
       arguments: {'isEditMode': true},
     );
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
   }
 
   @override

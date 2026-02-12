@@ -430,6 +430,28 @@ class SignUpViewModel extends ChangeNotifier {
       return 'Please enter a valid email address';
     }
 
+    if (_step1Model.telNo == null || _step1Model.telNo!.trim().isEmpty) {
+      return 'Please enter your telephone number';
+    }
+
+    if (_step1Model.whatsappNo == null || _step1Model.whatsappNo!.trim().isEmpty) {
+      return 'Please enter your WhatsApp number';
+    }
+
+    if (_step1Model.postCode == null || _step1Model.postCode!.trim().isEmpty) {
+      return 'Please enter your post code';
+    }
+
+    if (_step1Model.natInsuranceNo == null ||
+        _step1Model.natInsuranceNo!.trim().isEmpty) {
+      return 'Please enter your National Insurance number';
+    }
+
+    if (_step1Model.nationality == null ||
+        _step1Model.nationality!.trim().isEmpty) {
+      return 'Please enter your nationality';
+    }
+
     // Password validation - only required in registration mode, optional in edit mode
     if (!_isEditMode) {
       if (_step1Model.password.isEmpty) {
@@ -462,19 +484,35 @@ class SignUpViewModel extends ChangeNotifier {
       }
     }
 
-    if (_step1Model.latitude != null &&
-        (_step1Model.latitude! < -90 || _step1Model.latitude! > 90)) {
+    // Require location mark
+    if (_step1Model.latitude == null || _step1Model.longitude == null) {
+      return 'Please mark your location on the map';
+    }
+
+    if (_step1Model.latitude! < -90 || _step1Model.latitude! > 90) {
       return 'Latitude must be between -90 and 90';
     }
-    if (_step1Model.longitude != null &&
-        (_step1Model.longitude! < -180 || _step1Model.longitude! > 180)) {
+    if (_step1Model.longitude! < -180 || _step1Model.longitude! > 180) {
       return 'Longitude must be between -180 and 180';
     }
 
+    // City required
+    if (_step1Model.city == null || _step1Model.city!.trim().isEmpty) {
+      return 'Please enter your city';
+    }
+
+    // If student visa hours are provided, validate range
     if (_step1Model.studentVisaHoursPerWeek != null &&
         (_step1Model.studentVisaHoursPerWeek! < 0 ||
             _step1Model.studentVisaHoursPerWeek! > 168)) {
       return 'Student visa hours must be between 0 and 168';
+    }
+
+    // If user needs work permit, expiry date is required
+    if (_step1Model.needWorkPermit == true &&
+        (_step1Model.workPermitExpiry == null ||
+            _step1Model.workPermitExpiry!.isEmpty)) {
+      return 'Please select your work permit expiry date';
     }
 
     return null;

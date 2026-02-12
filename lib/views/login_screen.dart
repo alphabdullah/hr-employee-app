@@ -95,21 +95,23 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       children: [
         Container(
-          width: ScreenUnitUtil.getWidth(100),
-          height: ScreenUnitUtil.getWidth(100),
+          width: ScreenUnitUtil.getWidth(120),
+          height: ScreenUnitUtil.getWidth(120),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
             shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.primaryContainer,
           ),
-          child: Icon(
-            Icons.person,
-            size: ScreenUnitUtil.getFontSize(50),
-            color: Colors.white,
+          child: Padding(
+            padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(12)),
+            child: Image.asset(
+              'assets/icon/icon.png',
+              fit: BoxFit.contain,
+            ),
           ),
         ),
         SizedBox(height: ScreenUnitUtil.getSpacing(16)),
         Text(
-          'HR Employee App',
+          'TempSpot',
           style: TextStyle(
             fontSize: ScreenUnitUtil.getFontSize(28),
             fontWeight: FontWeight.bold,

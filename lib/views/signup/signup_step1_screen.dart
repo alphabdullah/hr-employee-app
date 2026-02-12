@@ -781,6 +781,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
 
   bool _obscurePassword = true;
   bool _obscurePasswordConfirmation = true;
+  bool _isOnStudentVisa = false;
 
   @override
   void dispose() {
@@ -897,6 +898,10 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
             .toString();
       }
 
+      _isOnStudentVisa =
+          step1Model.studentVisaHoursPerWeek != null &&
+              step1Model.studentVisaHoursPerWeek! > 0;
+
       setState(() {});
     });
   }
@@ -908,7 +913,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Create Account',
+          'Personal Information',
           style: TextStyle(
             fontSize: ScreenUnitUtil.getFontSize(20),
             fontWeight: FontWeight.w600,
@@ -1346,7 +1351,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             controller: _telNoController,
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
-                              labelText: 'Telephone Number',
+                              labelText: 'Telephone Number *',
                               hintText: '+44 1234567890',
                               prefixIcon: const Icon(Icons.phone_outlined),
                               errorStyle: TextStyle(
@@ -1392,7 +1397,9 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               viewModel.updateStep1TelNo(value);
                             },
                             validator: (value) {
-                              if (value != null && value.isNotEmpty) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your telephone number';
+                              }
                                 // Remove spaces, dashes, and parentheses for validation
                                 final cleaned = value.replaceAll(
                                   RegExp(r'[\s\-\(\)]'),
@@ -1417,7 +1424,6 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                 // Check if total length is maximum 15 digits (country code + number)
                                 if (cleaned.length > 15)
                                   return 'Phone number including country code must be maximum 15 digits (currently ${cleaned.length} digits)';
-                              }
                               return null;
                             },
                           ),
@@ -1428,7 +1434,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             controller: _whatsappNoController,
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
-                              labelText: 'WhatsApp Number',
+                              labelText: 'WhatsApp Number *',
                               hintText: '+44 1234567890',
                               prefixIcon: const Icon(Icons.chat_outlined),
                               errorStyle: TextStyle(
@@ -1474,7 +1480,9 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               viewModel.updateStep1WhatsappNo(value);
                             },
                             validator: (value) {
-                              if (value != null && value.isNotEmpty) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your WhatsApp number';
+                              }
                                 // Remove spaces, dashes, and parentheses for validation
                                 final cleaned = value.replaceAll(
                                   RegExp(r'[\s\-\(\)]'),
@@ -1499,7 +1507,6 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                 // Check if total length is maximum 15 digits (country code + number)
                                 if (cleaned.length > 15)
                                   return 'WhatsApp number including country code must be maximum 15 digits (currently ${cleaned.length} digits)';
-                              }
                               return null;
                             },
                           ),
@@ -1522,11 +1529,14 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ],
                             onChanged: viewModel.updateStep1Address,
                             validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                if (value.length > 500)
-                                  return 'Address must be maximum 500 characters';
-                                if (value.trim().isEmpty)
-                                  return 'Address cannot be only spaces';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your address';
+                              }
+                              if (value.length > 500) {
+                                return 'Address must be maximum 500 characters';
+                              }
+                              if (value.trim().isEmpty) {
+                                return 'Address cannot be only spaces';
                               }
                               return null;
                             },
@@ -1566,7 +1576,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               }
                             },
                             icon: const Icon(Icons.map_outlined),
-                            label: const Text('Mark Your Location on Map'),
+                            label: const Text('Mark Your Location on Map *'),
                             style: OutlinedButton.styleFrom(
                               padding: EdgeInsets.symmetric(
                                 vertical: ScreenUnitUtil.getSpacing(12),
@@ -1575,6 +1585,23 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ),
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+
+                          if (viewModel.step1Model.latitude == null ||
+                              viewModel.step1Model.longitude == null)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                left: ScreenUnitUtil.getSpacing(4),
+                                right: ScreenUnitUtil.getSpacing(4),
+                                bottom: ScreenUnitUtil.getSpacing(12),
+                              ),
+                              child: Text(
+                                'Marking your location on the map is required',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: ScreenUnitUtil.getFontSize(12),
+                                ),
+                              ),
+                            ),
 
                           // Display selected location coordinates
                           if (viewModel.step1Model.latitude != null &&
@@ -1623,7 +1650,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           TextFormField(
                             controller: _postCodeController,
                             decoration: InputDecoration(
-                              labelText: 'Post Code',
+                              labelText: 'Post Code *',
                               hintText: 'SW1A 1AA',
                               prefixIcon: const Icon(
                                 Icons.location_on_outlined,
@@ -1649,62 +1676,70 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                               viewModel.updateStep1PostCode(value);
                             },
                             validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                // UK postcode format validation
-                                final ukPostcodePattern = RegExp(
-                                  r'^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$',
-                                  caseSensitive: false,
-                                );
-                                if (!ukPostcodePattern.hasMatch(value.trim()))
-                                  return 'Please enter a valid UK postcode';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your post code';
+                              }
+                              // UK postcode format validation
+                              final ukPostcodePattern = RegExp(
+                                r'^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$',
+                                caseSensitive: false,
+                              );
+                              if (!ukPostcodePattern.hasMatch(value.trim())) {
+                                return 'Please enter a valid UK postcode';
                               }
                               return null;
                             },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                          // Country (read-only)
+                          // Country
                           TextFormField(
                             controller: _countryController,
-                            enabled: false,
                             decoration: const InputDecoration(
-                              labelText: 'Country',
+                              labelText: 'Country *',
                               prefixIcon: Icon(Icons.public_outlined),
-                              suffixIcon: Icon(
-                                Icons.lock_outline,
-                                color: Colors.grey,
-                              ),
                             ),
+                            onChanged: viewModel.updateStep1Country,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your country';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                          // Region (read-only)
+                          // Region
                           TextFormField(
                             controller: _regionController,
-                            enabled: false,
                             decoration: const InputDecoration(
-                              labelText: 'Region',
+                              labelText: 'Region *',
                               prefixIcon: Icon(Icons.map_outlined),
-                              suffixIcon: Icon(
-                                Icons.lock_outline,
-                                color: Colors.grey,
-                              ),
                             ),
+                            onChanged: viewModel.updateStep1Region,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your region';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                          // District (read-only)
+                          // District
                           TextFormField(
                             controller: _districtController,
-                            enabled: false,
                             decoration: const InputDecoration(
-                              labelText: 'District',
+                              labelText: 'District *',
                               prefixIcon: Icon(Icons.location_city_outlined),
-                              suffixIcon: Icon(
-                                Icons.lock_outline,
-                                color: Colors.grey,
-                              ),
                             ),
+                            onChanged: viewModel.updateStep1District,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your district';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1712,7 +1747,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           TextFormField(
                             controller: _cityController,
                             decoration: const InputDecoration(
-                              labelText: 'City',
+                              labelText: 'City *',
                               prefixIcon: Icon(Icons.location_city_outlined),
                             ),
                             inputFormatters: [
@@ -1720,11 +1755,14 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ],
                             onChanged: viewModel.updateStep1City,
                             validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                if (value.length > 100)
-                                  return 'City must be maximum 100 characters';
-                                if (value.trim().isEmpty)
-                                  return 'City cannot be only spaces';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your city';
+                              }
+                              if (value.length > 100) {
+                                return 'City must be maximum 100 characters';
+                              }
+                              if (value.trim().isEmpty) {
+                                return 'City cannot be only spaces';
                               }
                               return null;
                             },
@@ -1735,7 +1773,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           TextFormField(
                             controller: _natInsuranceNoController,
                             decoration: const InputDecoration(
-                              labelText: 'National Insurance Number',
+                              labelText: 'National Insurance Number *',
                               hintText: 'AB123456C',
                               prefixIcon: Icon(Icons.security_outlined),
                             ),
@@ -1745,16 +1783,18 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ],
                             onChanged: viewModel.updateStep1NatInsuranceNo,
                             validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                // UK National Insurance format: 2 letters, 6 digits, 1 letter
-                                final niPattern = RegExp(
-                                  r'^[A-Z]{2}[0-9]{6}[A-Z]{1}$',
-                                  caseSensitive: false,
-                                );
-                                if (!niPattern.hasMatch(
-                                  value.replaceAll(' ', ''),
-                                ))
-                                  return 'Please enter a valid NI number (e.g., AB123456C)';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your National Insurance number';
+                              }
+                              // UK National Insurance format: 2 letters, 6 digits, 1 letter
+                              final niPattern = RegExp(
+                                r'^[A-Z]{2}[0-9]{6}[A-Z]{1}$',
+                                caseSensitive: false,
+                              );
+                              if (!niPattern.hasMatch(
+                                value.replaceAll(' ', ''),
+                              )) {
+                                return 'Please enter a valid NI number (e.g., AB123456C)';
                               }
                               return null;
                             },
@@ -1765,7 +1805,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           TextFormField(
                             controller: _nationalityController,
                             decoration: const InputDecoration(
-                              labelText: 'Nationality',
+                              labelText: 'Nationality *',
                               prefixIcon: Icon(Icons.flag_outlined),
                             ),
                             inputFormatters: [
@@ -1773,11 +1813,14 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                             ],
                             onChanged: viewModel.updateStep1Nationality,
                             validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                if (value.length > 100)
-                                  return 'Nationality must be maximum 100 characters';
-                                if (value.trim().isEmpty)
-                                  return 'Nationality cannot be only spaces';
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your nationality';
+                              }
+                              if (value.length > 100) {
+                                return 'Nationality must be maximum 100 characters';
+                              }
+                              if (value.trim().isEmpty) {
+                                return 'Nationality cannot be only spaces';
                               }
                               return null;
                             },
@@ -1796,7 +1839,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           DropdownButtonFormField<String>(
                             value: viewModel.step1Model.gender,
                             decoration: const InputDecoration(
-                              labelText: 'Gender',
+                              labelText: 'Gender *',
                               prefixIcon: Icon(Icons.person_outline),
                             ),
                             items:
@@ -1817,6 +1860,12 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                     )
                                     .toList(),
                             onChanged: viewModel.updateStep1Gender,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select your gender';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1824,7 +1873,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           DropdownButtonFormField<String>(
                             value: viewModel.step1Model.maritalStatus,
                             decoration: const InputDecoration(
-                              labelText: 'Marital Status',
+                              labelText: 'Marital Status *',
                               prefixIcon: Icon(Icons.family_restroom_outlined),
                             ),
                             items:
@@ -1849,6 +1898,12 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                     )
                                     .toList(),
                             onChanged: viewModel.updateStep1MaritalStatus,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select your marital status';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1886,38 +1941,82 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                   );
                                 }
                               },
+                              validator: (value) {
+                                if (viewModel.step1Model.needWorkPermit ==
+                                        true &&
+                                    (value == null || value.trim().isEmpty)) {
+                                  return 'Please select your work permit expiry date';
+                                }
+                                return null;
+                              },
                             ),
                           ],
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
-                          // Student Visa Hours
-                          TextFormField(
-                            controller: _studentVisaHoursController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Student Visa Hours Per Week',
-                              hintText: '0-168',
-                              prefixIcon: Icon(Icons.access_time_outlined),
-                            ),
+                          // Student visa question
+                          SwitchListTile(
+                            title: const Text('Are you on a student visa?'),
+                            value: _isOnStudentVisa,
                             onChanged: (value) {
-                              if (value.isNotEmpty) {
-                                viewModel.updateStep1StudentVisaHoursPerWeek(
-                                  int.tryParse(value),
-                                );
-                              } else {
+                              setState(() {
+                                _isOnStudentVisa = value;
+                              });
+                              if (!value) {
+                                _studentVisaHoursController.clear();
                                 viewModel.updateStep1StudentVisaHoursPerWeek(
                                   null,
                                 );
                               }
                             },
                           ),
-                          SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+
+                          if (_isOnStudentVisa) ...[
+                            SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+                            // Student Visa Hours
+                            TextFormField(
+                              controller: _studentVisaHoursController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Student Visa Hours Per Week *',
+                                hintText: '0-168',
+                                prefixIcon: Icon(Icons.access_time_outlined),
+                              ),
+                              onChanged: (value) {
+                                if (value.isNotEmpty) {
+                                  viewModel.updateStep1StudentVisaHoursPerWeek(
+                                    int.tryParse(value),
+                                  );
+                                } else {
+                                  viewModel.updateStep1StudentVisaHoursPerWeek(
+                                    null,
+                                  );
+                                }
+                              },
+                              validator: (value) {
+                                if (!_isOnStudentVisa) {
+                                  return null;
+                                }
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your student visa hours per week';
+                                }
+                                final hours = int.tryParse(value);
+                                if (hours == null) {
+                                  return 'Please enter a valid number of hours';
+                                }
+                                if (hours < 0 || hours > 168) {
+                                  return 'Hours must be between 0 and 168';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: ScreenUnitUtil.getSpacing(16)),
+                          ],
 
                           // Prefer contact
                           DropdownButtonFormField<String>(
                             value: viewModel.step1Model.preferContact,
                             decoration: const InputDecoration(
-                              labelText: 'Preferred Contact Method',
+                              labelText: 'Preferred Contact Method *',
                               prefixIcon: Icon(Icons.contact_mail_outlined),
                             ),
                             items:
@@ -1934,6 +2033,12 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                     )
                                     .toList(),
                             onChanged: viewModel.updateStep1PreferContact,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select a preferred contact method';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(16)),
 
@@ -1941,7 +2046,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                           DropdownButtonFormField<String>(
                             value: viewModel.step1Model.userType,
                             decoration: const InputDecoration(
-                              labelText: 'User Type',
+                              labelText: 'User Type *',
                               prefixIcon: Icon(Icons.work_outline),
                             ),
                             items:
@@ -1968,6 +2073,12 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                                     )
                                     .toList(),
                             onChanged: viewModel.updateStep1UserType,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select a user type';
+                              }
+                              return null;
+                            },
                           ),
                           SizedBox(height: ScreenUnitUtil.getSpacing(24)),
 

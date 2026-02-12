@@ -52,7 +52,7 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Create Account',
+          'Availability Information',
           style: TextStyle(
             fontSize: ScreenUnitUtil.getFontSize(20),
             fontWeight: FontWeight.w600,
@@ -81,15 +81,15 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                  Text(
-                    'Availability Information',
-                    style: TextStyle(
-                      fontSize: ScreenUnitUtil.getFontSize(24),
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                  // Text(
+                  //   'Availability Information',
+                  //   style: TextStyle(
+                  //     fontSize: ScreenUnitUtil.getFontSize(24),
+                  //     fontWeight: FontWeight.bold,
+                  //     color: Theme.of(context).colorScheme.onSurface,
+                  //   ),
+                  // ),
+                  // SizedBox(height: ScreenUnitUtil.getSpacing(8)),
                   Text(
                     'Select your available days for day and night shifts',
                     style: TextStyle(

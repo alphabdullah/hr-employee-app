@@ -114,7 +114,7 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Create Account',
+          'Bank Details',
           style: TextStyle(
             fontSize: ScreenUnitUtil.getFontSize(20),
             fontWeight: FontWeight.w600,
@@ -145,15 +145,15 @@ class _SignUpStep4ScreenState extends State<SignUpStep4Screen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Bank Details',
-                            style: TextStyle(
-                              fontSize: ScreenUnitUtil.getFontSize(24),
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                          // Text(
+                          //   'Bank Details',
+                          //   style: TextStyle(
+                          //     fontSize: ScreenUnitUtil.getFontSize(24),
+                          //     fontWeight: FontWeight.bold,
+                          //     color: Theme.of(context).colorScheme.onSurface,
+                          //   ),
+                          // ),
+                          // SizedBox(height: ScreenUnitUtil.getSpacing(8)),
                           Text(
                             'Please provide your bank account information',
                             style: TextStyle(
