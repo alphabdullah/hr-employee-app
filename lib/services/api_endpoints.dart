@@ -183,6 +183,8 @@ class ApiEndpoints {
   /// **Auth:** Required (Bearer token)
   static const String logout = '/logout';
 
+  static const String weeklyEarnings = '/api/me/weekly-earnings';
+
   /// Check registration status (pending, accepted, rejected)
   ///
   /// **Method:** GET

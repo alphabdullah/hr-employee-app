@@ -320,33 +320,33 @@ class JobCard extends StatelessWidget {
                   ],
                 ),
               ],
-              // Shift type (day/night) when available
-              if (job.shiftType != null && job.shiftType!.isNotEmpty) ...[
-                SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-                Row(
-                  children: [
-                    _buildJobDetailItem(
-                      context,
-                      Icons.wb_sunny_outlined,
-                      _formatShiftType(job.shiftType!),
-                    ),
-                  ],
-                ),
-              ],
+              // // Shift type (day/night) when available
+              // if (job.shiftType != null && job.shiftType!.isNotEmpty) ...[
+              //   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+              //   Row(
+              //     children: [
+              //       _buildJobDetailItem(
+              //         context,
+              //         Icons.wb_sunny_outlined,
+              //         _formatShiftType(job.shiftType!),
+              //       ),
+              //     ],
+              //   ),
+              // ],
               
-              // Posted Date (for Explore screen)
-              if (showPostedDate && job.createdAt != null && onFormatDateTime != null) ...[
-                SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-                Row(
-                  children: [
-                    _buildJobDetailItem(
-                      context,
-                      Icons.schedule_outlined,
-                      'Posted ${onFormatDateTime!(job.createdAt!)}',
-                    ),
-                  ],
-                ),
-              ],
+              // // Posted Date (for Explore screen)
+              // if (showPostedDate && job.createdAt != null && onFormatDateTime != null) ...[
+              //   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+              //   Row(
+              //     children: [
+              //       _buildJobDetailItem(
+              //         context,
+              //         Icons.schedule_outlined,
+              //         'Posted ${onFormatDateTime!(job.createdAt!)}',
+              //       ),
+              //     ],
+              //   ),
+              // ],
               
               // Check-in or Check-out Button (only for Home screen)
               if ((showCheckInButton || showCheckOutButton) && viewModel != null && applicationData != null) ...[

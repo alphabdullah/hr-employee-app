@@ -101,7 +101,7 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
 
                   // Day Days
                   Text(
-                    'Day Shifts',
+                    'Shift Days',
                     style: TextStyle(
                       fontSize: ScreenUnitUtil.getFontSize(18),
                       fontWeight: FontWeight.w600,
@@ -122,28 +122,28 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
                   ),
                   SizedBox(height: ScreenUnitUtil.getSpacing(24)),
 
-                  // Night Days
-                  Text(
-                    'Night Shifts',
-                    style: TextStyle(
-                      fontSize: ScreenUnitUtil.getFontSize(18),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                  Wrap(
-                    spacing: ScreenUnitUtil.getSpacing(8),
-                    runSpacing: ScreenUnitUtil.getSpacing(8),
-                    children: _daysOfWeek.map((day) {
-                      final isSelected = viewModel.step3Model.nightDays.contains(day);
-                      return FilterChip(
-                        label: Text(day.toUpperCase()),
-                        selected: isSelected,
-                        onSelected: (_) => viewModel.toggleStep3NightDay(day),
-                      );
-                    }).toList(),
-                  ),
-                  SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  // // Night Days
+                  // Text(
+                  //   'Night Shifts',
+                  //   style: TextStyle(
+                  //     fontSize: ScreenUnitUtil.getFontSize(18),
+                  //     fontWeight: FontWeight.w600,
+                  //   ),
+                  // ),
+                  // SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  // Wrap(
+                  //   spacing: ScreenUnitUtil.getSpacing(8),
+                  //   runSpacing: ScreenUnitUtil.getSpacing(8),
+                  //   children: _daysOfWeek.map((day) {
+                  //     final isSelected = viewModel.step3Model.nightDays.contains(day);
+                  //     return FilterChip(
+                  //       label: Text(day.toUpperCase()),
+                  //       selected: isSelected,
+                  //       onSelected: (_) => viewModel.toggleStep3NightDay(day),
+                  //     );
+                  //   }).toList(),
+                  // ),
+                  // SizedBox(height: ScreenUnitUtil.getSpacing(24)),
 
                   // Error Message
                   if (viewModel.errorMessage != null)

@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo/App Title Section
-                    SizedBox(height: ScreenUnitUtil.getHeight(60)),
+                    SizedBox(height: ScreenUnitUtil.getHeight(30)),
                     _buildLogoSection(),
                     SizedBox(height: ScreenUnitUtil.getHeight(80)),
                     
@@ -97,12 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
         Container(
           width: ScreenUnitUtil.getWidth(120),
           height: ScreenUnitUtil.getWidth(120),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Theme.of(context).colorScheme.primaryContainer,
-          ),
+          // decoration: BoxDecoration(
+          //   shape: BoxShape.circle,
+          //   color: Theme.of(context).colorScheme.primaryContainer,
+          // ),
           child: Padding(
-            padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(12)),
+            padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(8)),
             child: Image.asset(
               'assets/icon/icon.png',
               fit: BoxFit.contain,

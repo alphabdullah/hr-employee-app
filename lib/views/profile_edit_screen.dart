@@ -51,42 +51,55 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               );
             }
 
-            return Column(
-            children: [
-              SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-              Text(
-                'Pick a section to update',
-                style: TextStyle(
-                  fontSize: ScreenUnitUtil.getFontSize(20),
-                  fontWeight: FontWeight.w600,
+            return RefreshIndicator(
+              onRefresh: () async {
+                await viewModel.refreshProfileData();
+                await viewModel.fetchCustomFields(forceRefresh: true);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: ScreenUnitUtil.getSpacing(24),
+                  vertical: ScreenUnitUtil.getSpacing(24),
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    Text(
+                      'Pick a section to update',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(20),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(34)),
+                    _buildPrimaryStepButton(context, 'Profile', Icons.person_outline, 1),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+                    _buildPrimaryStepButton(context, 'Compliance', Icons.verified_user_outlined, 2),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+                    _buildPrimaryStepButton(context, 'Availability', Icons.calendar_today_outlined, 3),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+                    _buildPrimaryStepButton(context, 'Bank Details', Icons.account_balance_outlined, 4),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+                    _buildPrimaryStepButton(context, 'Tax Details', Icons.receipt_long_outlined, 5),
+                    if (viewModel.hasCustomFields && viewModel.customFields.isNotEmpty) ...[
+                      SizedBox(height: ScreenUnitUtil.getSpacing(20)),
+                      _buildPrimaryStepButton(context, 'Additional Information', Icons.info_outline, 6),
+                    ],
+                    SizedBox(height: ScreenUnitUtil.getSpacing(34)),
+                    Text(
+                      'Tap any button to go directly into that step for editing.',
+                      style: TextStyle(
+                        fontSize: ScreenUnitUtil.getFontSize(14),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  ],
                 ),
               ),
-              SizedBox(height: ScreenUnitUtil.getSpacing(34)),
-              _buildPrimaryStepButton(context, 'Profile', Icons.person_outline, 1),
-              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
-              _buildPrimaryStepButton(context, 'Compliance', Icons.verified_user_outlined, 2),
-              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
-              _buildPrimaryStepButton(context, 'Availability', Icons.calendar_today_outlined, 3),
-              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
-              _buildPrimaryStepButton(context, 'Bank Details', Icons.account_balance_outlined, 4),
-              SizedBox(height: ScreenUnitUtil.getSpacing(20)),
-              _buildPrimaryStepButton(context, 'Tax Details', Icons.receipt_long_outlined, 5),
-              // Show Step 6 button if custom fields exist
-              if (viewModel.hasCustomFields && viewModel.customFields.isNotEmpty) ...[
-                SizedBox(height: ScreenUnitUtil.getSpacing(20)),
-                _buildPrimaryStepButton(context, 'Additional Information', Icons.info_outline, 6),
-              ],
-              SizedBox(height: ScreenUnitUtil.getSpacing(34)),
-              Text(
-                'Tap any button to go directly into that step for editing.',
-                style: TextStyle(
-                  fontSize: ScreenUnitUtil.getFontSize(14),
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          );
+            );
           },
         ),
       ),

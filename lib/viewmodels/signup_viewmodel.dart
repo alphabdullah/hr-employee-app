@@ -24,6 +24,7 @@ class SignUpViewModel extends ChangeNotifier {
   RegisterStep4Model _step4Model = RegisterStep4Model.empty();
   RegisterStep5Model _step5Model = RegisterStep5Model.empty();
   RegisterStep5P46Model _step5P46Model = RegisterStep5P46Model.empty();
+  final Map<int, String> _customFieldDocumentUrls = {};
 
   // Custom fields
   List<CustomFieldModel> _customFields = [];
@@ -57,6 +58,13 @@ class SignUpViewModel extends ChangeNotifier {
   List<CustomFieldModel> get customFields => _customFields;
   bool get hasCustomFields => _hasCustomFields;
   bool get isLoadingCustomFields => _isLoadingCustomFields;
+  String? getDocumentUrl(int fieldId) => _customFieldDocumentUrls[fieldId];
+  void clearDocumentUrl(int fieldId) {
+    if (_customFieldDocumentUrls.containsKey(fieldId)) {
+      _customFieldDocumentUrls.remove(fieldId);
+      notifyListeners();
+    }
+  }
   bool get isLoading => _isLoading;
   bool get isStepLoading => _isStepLoading;
   bool get isLoadingProfile => _isLoadingProfile;
@@ -1533,6 +1541,7 @@ class SignUpViewModel extends ChangeNotifier {
           debugPrint('Parsing profile_extra: $profileExtraData');
           // Reset custom field values map
           _step5Model = RegisterStep5Model.empty();
+          _customFieldDocumentUrls.clear();
 
           for (final item in profileExtraData) {
             if (item is! Map<String, dynamic>) continue;
@@ -1551,6 +1560,12 @@ class SignUpViewModel extends ChangeNotifier {
               final fileName = item['file_name']?.toString();
               if (fileName != null && fileName.isNotEmpty) {
                 _step5Model.setFieldValue(fieldId, fileName);
+              }
+              final fileUrl = item['file_url']?.toString();
+              if (fileUrl != null && fileUrl.isNotEmpty) {
+                _customFieldDocumentUrls[fieldId] = fileUrl;
+              } else {
+                _customFieldDocumentUrls.remove(fieldId);
               }
             }
           }
@@ -1571,6 +1586,11 @@ class SignUpViewModel extends ChangeNotifier {
       debugPrint('Error loading profile data: $e');
       notifyListeners();
     }
+  }
+
+  Future<void> refreshProfileData() async {
+    _hasLoadedMeData = false;
+    await loadProfileData();
   }
 
   // ============================================================================

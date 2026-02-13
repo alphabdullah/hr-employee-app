@@ -31,6 +31,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Text(
           'Earnings',
           style: TextStyle(
@@ -103,33 +104,20 @@ class _EarningsScreenState extends State<EarningsScreen> {
               }
             },
             child: SingleChildScrollView(
-              physics: AlwaysScrollableScrollPhysics(),
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Overall Summary Card
-                  _buildOverallSummaryCard(context, earnings.overall),
+                  _buildPerHourCard(context, earnings),
                   SizedBox(height: ScreenUnitUtil.getSpacing(24)),
-                  
-                  // Per Job Earnings Section
-                  Text(
-                    'Per Job Earnings',
-                    style: TextStyle(
-                      fontSize: ScreenUnitUtil.getFontSize(20),
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  SizedBox(height: ScreenUnitUtil.getSpacing(16)),
-                  
-                  if (earnings.perJob.isEmpty)
-                    _buildEmptyState(context)
-                  else
-                    ...earnings.perJob.map((job) => Padding(
-                      padding: EdgeInsets.only(bottom: ScreenUnitUtil.getSpacing(12)),
-                      child: _buildJobEarningCard(context, job),
-                    )),
+                  _buildWeekSelector(context, viewModel),
+                  SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                  _buildDetailCard(context, earnings),
+                  if (earnings.jobTitles.isNotEmpty) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(24)),
+                    _buildJobTitlesSection(context, earnings.jobTitles),
+                  ],
                 ],
               ),
             ),
@@ -139,7 +127,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
     );
   }
 
-  Widget _buildOverallSummaryCard(BuildContext context, overall) {
+  Widget _buildPerHourCard(BuildContext context, earnings) {
     return Container(
       padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(20)),
       decoration: BoxDecoration(
@@ -150,209 +138,156 @@ class _EarningsScreenState extends State<EarningsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Overall Summary',
+            'Per Hour Rate',
             style: TextStyle(
-              fontSize: ScreenUnitUtil.getFontSize(18),
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              fontSize: ScreenUnitUtil.getFontSize(14),
+              color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
             ),
           ),
-          SizedBox(height: ScreenUnitUtil.getSpacing(16)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  context,
-                  'Total Hours',
-                  _formatHours(overall.totalHours),
-                  Icons.access_time,
-                ),
-              ),
-              SizedBox(width: ScreenUnitUtil.getSpacing(16)),
-              Expanded(
-                child: _buildSummaryItem(
-                  context,
-                  'Total Earnings',
-                  _formatCurrency(overall.totalEarning),
-                  Icons.attach_money,
-                ),
-              ),
-            ],
+          SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+          Text(
+            '£${earnings.perHourRate.toStringAsFixed(2)} / hr',
+            style: TextStyle(
+              fontSize: ScreenUnitUtil.getFontSize(28),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildWeekSelector(BuildContext context, EarningsViewModel viewModel) {
+    final selectedLabel =
+        DateFormat('EEE dd MMM yyyy').format(viewModel.selectedWeekStart);
+    return Row(
       children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              size: ScreenUnitUtil.getFontSize(20),
-              color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+        Expanded(
+          child: Text(
+            'Week starting (Saturday): $selectedLabel',
+            style: TextStyle(
+              fontSize: ScreenUnitUtil.getFontSize(14),
+              fontWeight: FontWeight.w500,
             ),
-            SizedBox(width: ScreenUnitUtil.getSpacing(4)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: ScreenUnitUtil.getFontSize(12),
-                color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: ScreenUnitUtil.getFontSize(20),
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
+        ),
+        OutlinedButton(
+          onPressed: () => _selectWeekStart(context, viewModel),
+          child: const Text('Change'),
         ),
       ],
     );
   }
 
-  Widget _buildJobEarningCard(BuildContext context, job) {
+  Future<void> _selectWeekStart(
+    BuildContext context,
+    EarningsViewModel viewModel,
+  ) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: viewModel.selectedWeekStart,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      final saturday = EarningsViewModel.alignToSaturday(picked);
+      await viewModel.fetchEarnings(
+        forceRefresh: true,
+        requestedDate: saturday,
+      );
+    }
+  }
+
+  Widget _buildDetailCard(BuildContext context, earnings) {
     return Container(
-      padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(16)),
+      padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(20)),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(12)),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Job Title
-          Text(
-            job.jobTitle,
-            style: TextStyle(
-              fontSize: ScreenUnitUtil.getFontSize(16),
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          _buildDetailRow(context, 'Week label', earnings.weekLabel),
+          const Divider(),
+          _buildDetailRow(
+            context,
+            'Week start',
+            DateFormat('dd MMM yyyy').format(earnings.weekStart),
           ),
-          SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-          
-          // Date Range
-          Row(
-            children: [
-              Icon(
-                Icons.calendar_today_outlined,
-                size: ScreenUnitUtil.getFontSize(14),
+          _buildDetailRow(
+            context,
+            'Week end',
+            DateFormat('dd MMM yyyy').format(earnings.weekEnd),
+          ),
+          _buildDetailRow(context, 'Total hours', _formatHours(earnings.totalHours)),
+          _buildDetailRow(
+            context,
+            'Total earning',
+            _formatCurrency(earnings.totalEarning),
+          ),
+          _buildDetailRow(
+            context,
+            'Effective per hour',
+            '£${earnings.effectivePerHour.toStringAsFixed(2)} / hr',
+          ),
+          _buildDetailRow(context, 'Jobs count', earnings.jobsCount.toString()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: ScreenUnitUtil.getSpacing(6)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: ScreenUnitUtil.getFontSize(14),
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              SizedBox(width: ScreenUnitUtil.getSpacing(4)),
-              Text(
-                job.formattedDateRange,
-                style: TextStyle(
-                  fontSize: ScreenUnitUtil.getFontSize(14),
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+            ),
           ),
-          SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-          
-          // Hours and Earnings
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: _buildJobStat(
-                  context,
-                  'Hours',
-                  _formatHours(job.totalHours),
-                ),
-              ),
-              SizedBox(width: ScreenUnitUtil.getSpacing(16)),
-              Expanded(
-                child: _buildJobStat(
-                  context,
-                  'Earnings',
-                  _formatCurrency(job.totalEarning),
-                  isEarning: true,
-                ),
-              ),
-            ],
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: ScreenUnitUtil.getFontSize(14),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildJobStat(
-    BuildContext context,
-    String label,
-    String value, {
-    bool isEarning = false,
-  }) {
+  Widget _buildJobTitlesSection(BuildContext context, List<String> jobTitles) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
-          style: TextStyle(
-            fontSize: ScreenUnitUtil.getFontSize(12),
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        SizedBox(height: ScreenUnitUtil.getSpacing(4)),
-        Text(
-          value,
+          'Jobs this week',
           style: TextStyle(
             fontSize: ScreenUnitUtil.getFontSize(16),
             fontWeight: FontWeight.w600,
-            color: isEarning
-                ? AppColors.success
-                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
+        SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+        Wrap(
+          spacing: ScreenUnitUtil.getSpacing(8),
+          runSpacing: ScreenUnitUtil.getSpacing(8),
+          children: jobTitles
+              .map((title) => Chip(label: Text(title)))
+              .toList(),
+        ),
       ],
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(32)),
-      child: Column(
-        children: [
-          Icon(
-            Icons.work_outline,
-            size: ScreenUnitUtil.getFontSize(64),
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-          ),
-          SizedBox(height: ScreenUnitUtil.getSpacing(16)),
-          Text(
-            'No earnings data available',
-            style: TextStyle(
-              fontSize: ScreenUnitUtil.getFontSize(16),
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

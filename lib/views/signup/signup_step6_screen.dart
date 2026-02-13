@@ -96,20 +96,20 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
     setState(() {});
   }
 
-  Widget _buildField(CustomFieldModel field) {
+  Widget _buildField(CustomFieldModel field, SignUpViewModel viewModel) {
     switch (field.type.toLowerCase()) {
       case 'text':
       case 'textarea':
-        return _buildTextField(field);
+        return _buildTextField(field, viewModel);
       case 'document':
-        return _buildDocumentField(field);
+        return _buildDocumentField(field, viewModel);
       default:
         // Default to text field for any unknown types
-        return _buildTextField(field);
+        return _buildTextField(field, viewModel);
     }
   }
 
-  Widget _buildTextField(CustomFieldModel field) {
+  Widget _buildTextField(CustomFieldModel field, SignUpViewModel viewModel) {
     final controller = _controllers[field.id] ?? TextEditingController();
     if (!_controllers.containsKey(field.id)) {
       _controllers[field.id] = controller;
@@ -151,19 +151,22 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
       },
       onChanged: (value) {
         _fieldValues[field.id] = value;
-        context.read<SignUpViewModel>().updateStep5Field(field.id, value);
+        viewModel.updateStep5Field(field.id, value);
       },
     );
   }
 
-  Widget _buildDocumentField(CustomFieldModel field) {
+  Widget _buildDocumentField(CustomFieldModel field, SignUpViewModel viewModel) {
     final file = _documentFiles[field.id];
     final maxSizeMb = field.maxFileSizeMb ?? 20;
+    final remoteUrl = viewModel.getDocumentUrl(field.id);
+    final previewWidget = _buildDocumentPreview(file, remoteUrl);
 
     return FormField<File>(
       initialValue: file,
       validator: (val) {
-        if (field.isRequired && val == null) {
+        final hasRemoteFile = remoteUrl != null && remoteUrl.isNotEmpty;
+        if (field.isRequired && val == null && !hasRemoteFile) {
           return '${field.label} is required';
         }
         if (val != null) {
@@ -175,6 +178,10 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
         return null;
       },
       builder: (formFieldState) {
+        final displayName = file?.path.split('/').last ??
+            viewModel.step5Model.getFieldValue(field.id)?.toString() ??
+            'Uploaded file';
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -186,7 +193,11 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
               ),
             ),
             SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-            if (file != null)
+            if (previewWidget != null) ...[
+              previewWidget,
+              SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+            ],
+            if (file != null || (remoteUrl != null && remoteUrl.isNotEmpty))
               Container(
                 padding: EdgeInsets.all(ScreenUnitUtil.getSpacing(12)),
                 decoration: BoxDecoration(
@@ -201,7 +212,7 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
                     SizedBox(width: ScreenUnitUtil.getSpacing(8)),
                     Expanded(
                       child: Text(
-                        file.path.split('/').last,
+                        displayName,
                         style: TextStyle(
                           fontSize: ScreenUnitUtil.getFontSize(14),
                         ),
@@ -213,10 +224,11 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
                       onPressed: () {
                         _documentFiles[field.id] = null;
                         _fieldValues[field.id] = null;
-                        context.read<SignUpViewModel>().updateStep5Field(
+                        viewModel.updateStep5Field(
                           field.id,
                           null,
                         );
+                        viewModel.clearDocumentUrl(field.id);
                         formFieldState.didChange(null);
                         setState(() {});
                       },
@@ -273,7 +285,8 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
                         _documentFiles[field.id] = file;
                         _fieldValues[field.id] =
                             file.path; // Store file path temporarily
-                        context.read<SignUpViewModel>().updateStep5Field(
+                        viewModel.clearDocumentUrl(field.id);
+                        viewModel.updateStep5Field(
                           field.id,
                           file.path,
                         );
@@ -322,6 +335,52 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
         );
       },
     );
+  }
+
+  Widget? _buildDocumentPreview(File? file, String? remoteUrl) {
+    if (file != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
+        child: Image.file(
+          file,
+          width: double.infinity,
+          height: ScreenUnitUtil.getSpacing(150),
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+    if (remoteUrl != null && remoteUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(ScreenUnitUtil.getSpacing(8)),
+        child: Image.network(
+          remoteUrl,
+          width: double.infinity,
+          height: ScreenUnitUtil.getSpacing(150),
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return SizedBox(
+              height: ScreenUnitUtil.getSpacing(150),
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              height: ScreenUnitUtil.getSpacing(150),
+              color: Colors.grey.shade100,
+              child: Center(
+                child: Icon(
+                  Icons.broken_image,
+                  size: ScreenUnitUtil.getFontSize(32),
+                  color: Colors.grey,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+    return null;
   }
 
   @override
@@ -416,7 +475,7 @@ class _SignUpStep6ScreenState extends State<SignUpStep6Screen> {
                         padding: EdgeInsets.only(
                           bottom: ScreenUnitUtil.getSpacing(16),
                         ),
-                        child: _buildField(field),
+                        child: _buildField(field, viewModel),
                       );
                     }).toList(),
 

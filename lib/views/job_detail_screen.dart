@@ -297,14 +297,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       '${widget.job.numberOfDays} day${widget.job.numberOfDays! > 1 ? 's' : ''}',
                     ),
                   ],
-                  if (widget.job.shiftType != null && widget.job.shiftType!.isNotEmpty) ...[
-                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
-                    _buildDetailRow(
-                      Icons.wb_sunny_outlined,
-                      'Shift',
-                      _formatShiftType(widget.job.shiftType!),
-                    ),
-                  ],
+                  // if (widget.job.shiftType != null && widget.job.shiftType!.isNotEmpty) ...[
+                  //   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                  //   _buildDetailRow(
+                  //     Icons.wb_sunny_outlined,
+                  //     'Shift',
+                  //     _formatShiftType(widget.job.shiftType!),
+                  //   ),
+                  // ],
                   // if (widget.job.jobDuration != null && widget.job.jobDuration!.isNotEmpty) ...[
                   //   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                   //   _buildDetailRow(

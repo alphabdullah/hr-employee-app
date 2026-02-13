@@ -1,134 +1,67 @@
-/// Earnings Model for per-job and overall earnings data
-class EarningsModel {
-  final List<PerJobEarning> perJob;
-  final OverallEarning overall;
+import 'package:intl/intl.dart';
 
-  EarningsModel({
-    required this.perJob,
-    required this.overall,
-  });
-
-  factory EarningsModel.fromJson(Map<String, dynamic> json) {
-    return EarningsModel(
-      perJob: (json['per_job'] as List<dynamic>?)
-              ?.map((item) => PerJobEarning.fromJson(item as Map<String, dynamic>))
-              .toList() ?? [],
-      overall: OverallEarning.fromJson(json['overall'] as Map<String, dynamic>),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'per_job': perJob.map((item) => item.toJson()).toList(),
-      'overall': overall.toJson(),
-    };
-  }
-}
-
-/// Per Job Earning Model
-class PerJobEarning {
-  final int jobId;
-  final String jobTitle;
-  final String fromDate;
-  final String endDate;
+/// Weekly earnings payload returned by `/api/me/weekly-earnings`
+class WeeklyEarningsModel {
+  final DateTime weekStart;
+  final DateTime weekEnd;
+  final String weekLabel;
   final double totalHours;
   final double totalEarning;
+  final double perHourRate;
+  final double effectivePerHour;
+  final int jobsCount;
+  final List<String> jobTitles;
 
-  PerJobEarning({
-    required this.jobId,
-    required this.jobTitle,
-    required this.fromDate,
-    required this.endDate,
+  WeeklyEarningsModel({
+    required this.weekStart,
+    required this.weekEnd,
+    required this.weekLabel,
     required this.totalHours,
     required this.totalEarning,
+    required this.perHourRate,
+    required this.effectivePerHour,
+    required this.jobsCount,
+    required this.jobTitles,
   });
 
-  factory PerJobEarning.fromJson(Map<String, dynamic> json) {
-    return PerJobEarning(
-      jobId: json['job_id'] is int ? json['job_id'] : int.parse(json['job_id'].toString()),
-      jobTitle: json['job_title']?.toString() ?? '',
-      fromDate: json['from_date']?.toString() ?? '',
-      endDate: json['end_date']?.toString() ?? '',
-      totalHours: json['total_hours'] is double 
-          ? json['total_hours'] 
-          : (json['total_hours'] is int 
-              ? (json['total_hours'] as int).toDouble() 
-              : double.tryParse(json['total_hours'].toString()) ?? 0.0),
-      totalEarning: json['total_earning'] is double 
-          ? json['total_earning'] 
-          : (json['total_earning'] is int 
-              ? (json['total_earning'] as int).toDouble() 
-              : double.tryParse(json['total_earning'].toString()) ?? 0.0),
+  factory WeeklyEarningsModel.fromJson(Map<String, dynamic> json) {
+    return WeeklyEarningsModel(
+      weekStart: DateTime.parse(json['week_start'] as String),
+      weekEnd: DateTime.parse(json['week_end'] as String),
+      weekLabel: json['week_label']?.toString() ?? '',
+      totalHours: _toDouble(json['total_hours']),
+      totalEarning: _toDouble(json['total_earning']),
+      perHourRate: _toDouble(json['per_hour_rate']),
+      effectivePerHour: _toDouble(json['effective_per_hour']),
+      jobsCount: json['jobs_count'] is int
+          ? json['jobs_count'] as int
+          : int.tryParse(json['jobs_count'].toString()) ?? 0,
+      jobTitles: (json['job_titles'] as List<dynamic>?)
+              ?.map((title) => title?.toString() ?? '')
+              .where((title) => title.isNotEmpty)
+              .toList() ??
+          [],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'job_id': jobId,
-      'job_title': jobTitle,
-      'from_date': fromDate,
-      'end_date': endDate,
+      'week_start': DateFormat('yyyy-MM-dd').format(weekStart),
+      'week_end': DateFormat('yyyy-MM-dd').format(weekEnd),
+      'week_label': weekLabel,
       'total_hours': totalHours,
       'total_earning': totalEarning,
+      'per_hour_rate': perHourRate,
+      'effective_per_hour': effectivePerHour,
+      'jobs_count': jobsCount,
+      'job_titles': jobTitles,
     };
   }
 
-  /// Format date range string
-  String get formattedDateRange {
-    try {
-      final from = DateTime.parse(fromDate);
-      final end = DateTime.parse(endDate);
-      
-      if (from.year == end.year && from.month == end.month && from.day == end.day) {
-        // Same day
-        return '${from.day} ${_getMonthName(from.month)} ${from.year}';
-      } else {
-        // Date range
-        return '${from.day} ${_getMonthName(from.month)} - ${end.day} ${_getMonthName(end.month)} ${end.year}';
-      }
-    } catch (e) {
-      return '$fromDate - $endDate';
-    }
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return months[month - 1];
-  }
-}
-
-/// Overall Earning Model
-class OverallEarning {
-  final double totalHours;
-  final double totalEarning;
-
-  OverallEarning({
-    required this.totalHours,
-    required this.totalEarning,
-  });
-
-  factory OverallEarning.fromJson(Map<String, dynamic> json) {
-    return OverallEarning(
-      totalHours: json['total_hours'] is double 
-          ? json['total_hours'] 
-          : (json['total_hours'] is int 
-              ? (json['total_hours'] as int).toDouble() 
-              : double.tryParse(json['total_hours'].toString()) ?? 0.0),
-      totalEarning: json['total_earning'] is double 
-          ? json['total_earning'] 
-          : (json['total_earning'] is int 
-              ? (json['total_earning'] as int).toDouble() 
-              : double.tryParse(json['total_earning'].toString()) ?? 0.0),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'total_hours': totalHours,
-      'total_earning': totalEarning,
-    };
+  static double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0.0;
   }
 }
