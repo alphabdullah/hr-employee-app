@@ -389,39 +389,39 @@ class JobCard extends StatelessWidget {
     );
   }
 
-  String _formatPay(double pay) {
-    if (pay % 1 == 0) {
-      return pay.toStringAsFixed(0);
-    }
-    return pay.toStringAsFixed(2);
-  }
-String _buildPayText(JobModel job) {
-  final pay = _formatPay(job.perHourPay!);
+  // String _formatPay(double pay) {
+  //   if (pay % 1 == 0) {
+  //     return pay.toStringAsFixed(0);
+  //   }
+  //   return pay.toStringAsFixed(2);
+  // }
+// String _buildPayText(JobModel job) {
+//   final pay = _formatPay(job.perHourPay!);
 
-  if (job.workMode == 'fixed') {
-    return 'USD $pay / Job';
-  }
+//   if (job.workMode == 'fixed') {
+//     return 'USD $pay / Job';
+//   }
 
-  // default = per_hour
-  return 'USD $pay / hr';
-}
+//   // default = per_hour
+//   return 'USD $pay / hr';
+// }
 
-  String _formatShiftType(String shiftType) {
-    final s = shiftType.trim().toLowerCase();
-    if (s == 'day') return 'Day shift';
-    if (s == 'night') return 'Night shift';
-    if (s.isEmpty) return shiftType;
-    return shiftType[0].toUpperCase() + (shiftType.length > 1 ? shiftType.substring(1).toLowerCase() : '');
-  }
+//   String _formatShiftType(String shiftType) {
+//     final s = shiftType.trim().toLowerCase();
+//     if (s == 'day') return 'Day shift';
+//     if (s == 'night') return 'Night shift';
+//     if (s.isEmpty) return shiftType;
+//     return shiftType[0].toUpperCase() + (shiftType.length > 1 ? shiftType.substring(1).toLowerCase() : '');
+//   }
 
-  String _buildWorkersText(JobModel job) {
-    final remaining = job.numberOfWorkersRemaining;
-    if (job.isFullyFilled) {
-      return '${job.numberOfWorkersFilled}/${job.numberOfWorkersRequired} (Filled)';
-    } else {
-      return '${job.numberOfWorkersFilled}/${job.numberOfWorkersRequired} ($remaining left)';
-    }
-  }
+//   String _buildWorkersText(JobModel job) {
+//     final remaining = job.numberOfWorkersRemaining;
+//     if (job.isFullyFilled) {
+//       return '${job.numberOfWorkersFilled}/${job.numberOfWorkersRequired} (Filled)';
+//     } else {
+//       return '${job.numberOfWorkersFilled}/${job.numberOfWorkersRequired} ($remaining left)';
+//     }
+//   }
 
   Widget _buildCheckInButton(BuildContext context, JobViewModel viewModel, ApplicationData applicationData) {
     return SizedBox(

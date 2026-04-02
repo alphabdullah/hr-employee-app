@@ -34,6 +34,16 @@ class _SplashScreenState extends State<SplashScreen> {
     // Navigate based on authentication status
     if (mounted) {
       if (isLoggedIn && token != null && token.isNotEmpty) {
+        // Validate token first. If expired/invalid, force login.
+        final isTokenValid = await _validateToken(token);
+        if (!isTokenValid) {
+          await AuthService.logout();
+          if (mounted) {
+            Navigator.of(context).pushReplacementNamed(RouteNames.login);
+          }
+          return;
+        }
+
         // Validate current status from API (important for pending status)
         try {
           final response = await ApiClient.get(
@@ -123,6 +133,25 @@ class _SplashScreenState extends State<SplashScreen> {
         // User is not logged in, navigate to login
         Navigator.of(context).pushReplacementNamed(RouteNames.login);
       }
+    }
+  }
+
+  Future<bool> _validateToken(String token) async {
+    try {
+      final response = await ApiClient.get(
+        ApiEndpoints.validateToken,
+        token: token,
+      );
+      if (!response.isSuccess) {
+        debugPrint('[SplashScreen] Token validation API failed: ${response.message}');
+        return false;
+      }
+
+      final valid = response.getField<bool>('valid');
+      return valid == true;
+    } catch (e) {
+      debugPrint('[SplashScreen] Token validation error: $e');
+      return false;
     }
   }
 

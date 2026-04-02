@@ -30,7 +30,7 @@ class _JobHistoryScreenState extends State<JobHistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
+        centerTitle: false,
         title: Text(
           'Job History',
           style: TextStyle(

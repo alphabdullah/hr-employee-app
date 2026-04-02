@@ -31,7 +31,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
+        centerTitle: false,
         title: Text(
           'Earnings',
           style: TextStyle(

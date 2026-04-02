@@ -426,16 +426,14 @@ class SettingsScreen extends StatelessWidget {
       // Get authentication token
       final token = await AuthService.getToken();
       
-      // Call logout API endpoint if token exists (fire and forget)
+      // Call logout API endpoint if token exists
       if (token != null && token.isNotEmpty) {
         // Call logout API endpoint (no body needed, just Bearer token)
-        // Don't await - logout locally regardless of API response
-        ApiClient.post(
+        // Proceed with local cleanup regardless of API success/failure.
+        await ApiClient.post(
           ApiEndpoints.logout,
           token: token,
-        ).catchError((error) {
-          // Silently handle API errors - we'll logout locally anyway
-        });
+        );
       }
       
       // Always clear local authentication data immediately

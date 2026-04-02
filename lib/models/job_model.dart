@@ -41,6 +41,7 @@ class JobModel {
   final String? city;
   final List<String>? jobDays;
   final List<DateTime>? jobDayDates;
+  final List<JobDayTime>? jobDayTimes;
 
   JobModel({
     required this.id,
@@ -74,7 +75,18 @@ class JobModel {
     this.city,
       this.jobDays,
       this.jobDayDates,
+    this.jobDayTimes,
   });
+
+  JobDayTime? getJobDayTimeFor(DateTime date) {
+    if (jobDayTimes == null || jobDayTimes!.isEmpty) return null;
+    final target = DateTime(date.year, date.month, date.day);
+    for (final t in jobDayTimes!) {
+      final d = DateTime(t.date.year, t.date.month, t.date.day);
+      if (d.isAtSameMomentAs(target)) return t;
+    }
+    return null;
+  }
 
   /// Create JobModel from API JSON response
   /// Expected format: { "id": 1, "job_title": "...", ... }
@@ -289,6 +301,27 @@ class JobModel {
       if (jobDayDates.isEmpty) jobDayDates = null;
     }
 
+    List<JobDayTime>? jobDayTimes;
+    final rawJobDayTimes = json['job_day_times'];
+    if (rawJobDayTimes is List) {
+      final parsed = <JobDayTime>[];
+      for (final item in rawJobDayTimes) {
+        if (item is! Map) continue;
+        try {
+          parsed.add(
+            JobDayTime.fromJson(
+              Map<String, dynamic>.from(item),
+              fallbackDate: jobDate,
+            ),
+          );
+        } catch (_) {}
+      }
+      if (parsed.isNotEmpty) {
+        parsed.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+        jobDayTimes = parsed;
+      }
+    }
+
     return JobModel(
       id: json['id']?.toString() ?? '',
       jobTitle: json['job_title'] ?? '',
@@ -323,6 +356,7 @@ class JobModel {
       city: city,
       jobDays: jobDays,
       jobDayDates: jobDayDates,
+      jobDayTimes: jobDayTimes,
     );
   }
 
@@ -365,6 +399,7 @@ class JobModel {
       'city': city,
       'jobDays': jobDays,
       'jobDayDates': jobDayDates?.map((d) => d.toIso8601String()).toList(),
+      'jobDayTimes': jobDayTimes?.map((t) => t.toJson()).toList(),
     };
   }
 
@@ -400,6 +435,7 @@ class JobModel {
     String? city,
     List<String>? jobDays,
     List<DateTime>? jobDayDates,
+    List<JobDayTime>? jobDayTimes,
   }) {
     return JobModel(
       id: id ?? this.id,
@@ -433,6 +469,7 @@ class JobModel {
       city: city ?? this.city,
       jobDays: jobDays ?? this.jobDays,
       jobDayDates: jobDayDates ?? this.jobDayDates,
+      jobDayTimes: jobDayTimes ?? this.jobDayTimes,
     );
   }
 
@@ -497,6 +534,82 @@ class JobModel {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return months[month - 1];
+  }
+}
+
+class JobDayTime {
+  final DateTime date; // yyyy-MM-dd (local date only)
+  final String startTime; // HH:mm
+  final String endTime; // HH:mm
+  final String? startTimeInTimezone; // HH:mm
+  final String? endTimeInTimezone; // HH:mm
+  final String? startTimeUtc; // ISO string
+  final String? endTimeUtc; // ISO string
+
+  JobDayTime({
+    required this.date,
+    required this.startTime,
+    required this.endTime,
+    this.startTimeInTimezone,
+    this.endTimeInTimezone,
+    this.startTimeUtc,
+    this.endTimeUtc,
+  });
+
+  factory JobDayTime.fromJson(
+    Map<String, dynamic> json, {
+    DateTime? fallbackDate,
+  }) {
+    final dateStr = json['date']?.toString() ?? '';
+    final startTime = json['start_time']?.toString() ?? '';
+    final endTime = json['end_time']?.toString() ?? '';
+    DateTime parsedDate;
+    if (dateStr.isEmpty) {
+      if (fallbackDate == null) {
+        throw Exception('JobDayTime missing date');
+      }
+      parsedDate = fallbackDate;
+    } else {
+      parsedDate = DateTime.parse(dateStr);
+    }
+    return JobDayTime(
+      date: DateTime(parsedDate.year, parsedDate.month, parsedDate.day),
+      startTime: startTime,
+      endTime: endTime,
+      startTimeInTimezone: json['start_time_in_timezone']?.toString(),
+      endTimeInTimezone: json['end_time_in_timezone']?.toString(),
+      startTimeUtc: json['start_time_utc']?.toString(),
+      endTimeUtc: json['end_time_utc']?.toString(),
+    );
+  }
+
+  DateTime get startDateTime {
+    final parts = startTime.split(':');
+    final h = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
+    final m = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return DateTime(date.year, date.month, date.day, h, m);
+  }
+
+  DateTime get endDateTime {
+    final parts = endTime.split(':');
+    final h = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
+    final m = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return DateTime(date.year, date.month, date.day, h, m);
+  }
+
+  Map<String, dynamic> toJson() {
+    final yyyy = date.year.toString().padLeft(4, '0');
+    final mm = date.month.toString().padLeft(2, '0');
+    final dd = date.day.toString().padLeft(2, '0');
+    return {
+      'date': '$yyyy-$mm-$dd',
+      'start_time': startTime,
+      'end_time': endTime,
+      'start_time_in_timezone': startTimeInTimezone,
+      'end_time_in_timezone': endTimeInTimezone,
+      'start_time_utc': startTimeUtc,
+      'end_time_utc': endTimeUtc,
+    };
   }
 }
 

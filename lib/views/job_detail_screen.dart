@@ -289,6 +289,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     'Date',
                     widget.job.formattedDateRange ?? widget.job.formattedDate,
                   ),
+                  if (widget.job.jobDayTimes != null &&
+                      widget.job.jobDayTimes!.isNotEmpty) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+                    _buildDetailRow(
+                      Icons.access_time_outlined,
+                      'Time',
+                      '${widget.job.jobDayTimes!.first.startTime} - ${widget.job.jobDayTimes!.first.endTime}',
+                    ),
+                  ],
                   if (widget.job.numberOfDays != null && widget.job.numberOfDays! > 0) ...[
                     SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                     _buildDetailRow(
@@ -647,6 +656,8 @@ String _buildPayText(JobModel job) {
     }
     return time;
   }
+
+  // _formatScheduleDate removed (no longer needed)
 
   Widget _buildStatusBadge(JobStatus status) {
     Color backgroundColor;

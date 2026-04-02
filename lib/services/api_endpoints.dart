@@ -182,6 +182,7 @@ class ApiEndpoints {
   /// **Path:** /logout
   /// **Auth:** Required (Bearer token)
   static const String logout = '/logout';
+  static const String validateToken = '/api/token/validate';
 
   static const String weeklyEarnings = '/api/me/weekly-earnings';
 

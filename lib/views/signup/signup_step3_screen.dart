@@ -101,7 +101,7 @@ class _SignUpStep3ScreenState extends State<SignUpStep3Screen> {
 
                   // Day Days
                   Text(
-                    'Shift Days',
+                    'Select your available days',
                     style: TextStyle(
                       fontSize: ScreenUnitUtil.getFontSize(18),
                       fontWeight: FontWeight.w600,

@@ -154,6 +154,21 @@ class JobViewModel extends ChangeNotifier {
     if (status != 'selected' && status != 'in progress') {
       return false;
     }
+
+    // 3. Time gating (job_day_times)
+    // Allow check-in starting 1 hour before the scheduled start time.
+    final dayTime = application.job.getJobDayTimeFor(now) ??
+        (application.job.jobDayTimes != null &&
+                application.job.jobDayTimes!.isNotEmpty
+            ? application.job.jobDayTimes!.first
+            : null);
+    if (dayTime != null) {
+      final checkInFrom =
+          dayTime.startDateTime.subtract(const Duration(hours: 1));
+      if (now.isBefore(checkInFrom)) {
+        return false;
+      }
+    }
     
     return true;
   }
