@@ -162,7 +162,7 @@ class JobViewModel extends ChangeNotifier {
                 application.job.jobDayTimes!.isNotEmpty
             ? application.job.jobDayTimes!.first
             : null);
-    if (dayTime != null) {
+    if (dayTime != null && dayTime.hasScheduledStartTime) {
       final checkInFrom =
           dayTime.startDateTime.subtract(const Duration(hours: 1));
       if (now.isBefore(checkInFrom)) {
@@ -496,8 +496,25 @@ class JobViewModel extends ChangeNotifier {
     }
   }
 
+  /// Whether two application lists represent the same data (ids, status, job updatedAt).
+  bool _applicationsUnchanged(
+    List<ApplicationData> before,
+    List<ApplicationData> after,
+  ) {
+    if (before.length != after.length) return false;
+    String token(ApplicationData x) =>
+        '${x.job.id}|${x.status}|${x.job.updatedAt ?? ''}';
+    final a = before.map(token).toList()..sort();
+    final b = after.map(token).toList()..sort();
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
   /// Load user's jobs from /api/me/jobs
-  Future<void> loadMyJobs({bool forceRefresh = false}) async {
+  /// [silent]: no loading flag / no spinner; for polling, only [notifyListeners] if data changed.
+  Future<void> loadMyJobs({bool forceRefresh = false, bool silent = false}) async {
     // Try disk cache first
     if (!forceRefresh && _myApplications.isEmpty) {
       final cachedApplications = await CacheService.loadApplications();
@@ -536,14 +553,18 @@ class JobViewModel extends ChangeNotifier {
       return;
     }
 
-    _isLoadingApplications = true;
-    notifyListeners();
+    if (!silent) {
+      _isLoadingApplications = true;
+      notifyListeners();
+    }
 
     try {
       final token = await AuthService.getToken();
       if (token == null || token.isEmpty) {
-        _isLoadingApplications = false;
-        notifyListeners();
+        if (!silent) {
+          _isLoadingApplications = false;
+          notifyListeners();
+        }
         return;
       }
 
@@ -553,12 +574,15 @@ class JobViewModel extends ChangeNotifier {
         token: token,
       );
 
-      _isLoadingApplications = false;
+      if (!silent) {
+        _isLoadingApplications = false;
+      }
       _hasLoadedApplications = true;
 
       if (response.isSuccess) {
         List<Map<String, dynamic>>? jobsList = response.getList<Map<String, dynamic>>('jobs');
         if (jobsList != null && jobsList.isNotEmpty) {
+          final beforeSnapshot = List<ApplicationData>.from(_myApplications);
           _applicationStatuses.clear();
           _myApplications.clear();
           final applicationsForCache = <Map<String, dynamic>>[];
@@ -596,21 +620,31 @@ class JobViewModel extends ChangeNotifier {
           if (applicationsForCache.isNotEmpty) {
             await CacheService.saveApplications(applicationsForCache);
           }
-          notifyListeners();
+          if (!silent || !_applicationsUnchanged(beforeSnapshot, _myApplications)) {
+            notifyListeners();
+          }
         } else {
+          final hadApplications = _myApplications.isNotEmpty;
           _myApplications = [];
           await CacheService.clearApplications();
-          notifyListeners();
+          if (!silent || hadApplications) {
+            notifyListeners();
+          }
         }
       }
     } catch (e) {
-      _isLoadingApplications = false;
-      notifyListeners();
+      if (!silent) {
+        _isLoadingApplications = false;
+        notifyListeners();
+      }
     }
   }
 
-  Future<void> loadMyApplications({bool forceRefresh = false}) async {
-    return loadMyJobs(forceRefresh: forceRefresh);
+  Future<void> loadMyApplications({
+    bool forceRefresh = false,
+    bool silent = false,
+  }) async {
+    return loadMyJobs(forceRefresh: forceRefresh, silent: silent);
   }
 
   Future<void> _refreshMyJobsInBackground() async {

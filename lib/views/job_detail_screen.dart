@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/job_model.dart';
 import '../models/attendance_model.dart';
@@ -286,17 +287,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   SizedBox(height: ScreenUnitUtil.getSpacing(12)),
                   _buildDetailRow(
                     Icons.calendar_today_outlined,
-                    'Date',
-                    widget.job.formattedDateRange ?? widget.job.formattedDate,
+                    'Job days',
+                    widget.job.formattedJobDayDatesLine,
                   ),
                   if (widget.job.jobDayTimes != null &&
                       widget.job.jobDayTimes!.isNotEmpty) ...[
+                    SizedBox(height: ScreenUnitUtil.getSpacing(12)),
+                    _buildSectionTitle('Schedule'),
                     SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-                    _buildDetailRow(
-                      Icons.access_time_outlined,
-                      'Time',
-                      '${widget.job.jobDayTimes!.first.startTime} - ${widget.job.jobDayTimes!.first.endTime}',
-                    ),
+                    ..._buildJobDayTimeRows(widget.job.jobDayTimes!),
                   ],
                   if (widget.job.numberOfDays != null && widget.job.numberOfDays! > 0) ...[
                     SizedBox(height: ScreenUnitUtil.getSpacing(12)),
@@ -473,6 +472,42 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ),
       ],
     );
+  }
+
+  /// One row per entry in `job_day_times`: calendar date + start/end in 24h (HH:mm from API).
+  List<Widget> _buildJobDayTimeRows(List<JobDayTime> times) {
+    final dateFmt = DateFormat('d MMMM y');
+    final out = <Widget>[];
+    for (var i = 0; i < times.length; i++) {
+      final t = times[i];
+      out.add(
+        _buildDetailRow(
+          Icons.event_outlined,
+          dateFmt.format(t.date),
+          _formatJobDayTimeRange(t),
+        ),
+      );
+      if (i < times.length - 1) {
+        out.add(SizedBox(height: ScreenUnitUtil.getSpacing(12)));
+      }
+    }
+    return out;
+  }
+
+  String _formatJobDayTimeRange(JobDayTime t) {
+    final start = t.startTime?.trim();
+    final end = t.endTime?.trim();
+    final hasStart = start != null && start.isNotEmpty;
+    final hasEnd = end != null && end.isNotEmpty;
+    if (!hasStart && !hasEnd) {
+      return 'Time not set';
+    }
+    if (hasStart && hasEnd) {
+      return '$start - $end';
+    }
+    if (hasStart) return start;
+    // Remaining case: end only
+    return end ?? '';
   }
 
   String _getStatusText(JobStatus status) {
@@ -1184,14 +1219,11 @@ String _buildPayText(JobModel job) {
     return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}, ${date.year}';
   }
 
-  /// Format time from DateTime (HH:MM AM/PM)
+  /// Format time from DateTime in 24-hour format (HH:MM)
   String _formatTimeFromDateTime(DateTime dateTime) {
-    final localTime = dateTime.toLocal();
-    final hour = localTime.hour;
-    final minute = localTime.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    return '$displayHour:$minute $period';
+    final hh = dateTime.hour.toString().padLeft(2, '0');
+    final mm = dateTime.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
   }
 
   /// Format hours worked duration

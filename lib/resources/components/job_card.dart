@@ -230,42 +230,11 @@ class JobCard extends StatelessWidget {
                 maxLines: showJobImage ? 3 : 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              // if (job.perHourPay != null) ...[
-              //   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-              //   Text(
-              //     'USD ${_formatPay(job.perHourPay!)}/hr',
-              //     style: TextStyle(
-              //       fontSize: ScreenUnitUtil.getFontSize(14),
-              //       fontWeight: FontWeight.w600,
-              //       color: Theme.of(context).colorScheme.onSurface,
-              //     ),
-              //   ),
-              // ],
 
-//               if (job.perHourPay != null && job.workMode != null) ...[
-//   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-//   Text(
-//     _buildPayText(job),
-//     style: TextStyle(
-//       fontSize: ScreenUnitUtil.getFontSize(14),
-//       fontWeight: FontWeight.w600,
-//       color: Theme.of(context).colorScheme.onSurface,
-//     ),
-//   ),
-// ],
-
-              
-              // SizedBox(height: ScreenUnitUtil.getSpacing(12)),
               
               // Job Details Row
               Row(
                 children: [
-                  // _buildJobDetailItem(
-                  //   context,
-                  //   Icons.people_outline,
-                  //   _buildWorkersText(job),
-                  // ),
-                  // SizedBox(width: ScreenUnitUtil.getSpacing(16)),
                   _buildJobDetailItem(
                     context,
                     Icons.location_on_outlined,
@@ -276,37 +245,29 @@ class JobCard extends StatelessWidget {
               
               SizedBox(height: ScreenUnitUtil.getSpacing(8)),
               
-              // // Client name (when available from /api/me/jobs client object)
-              // if (job.createdBy != null && job.createdBy!['name'] != null && (job.createdBy!['name'] as String).isNotEmpty) ...[
-              //   Row(
-              //     children: [
-              //       _buildJobDetailItem(
-              //         context,
-              //         Icons.business_outlined,
-              //         'Client: ${job.createdBy!['name']}',
-              //       ),
-              //     ],
-              //   ),
-              //   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-              // ],
-              
-              // Date range (from_date - end_date) or single date
+              // Scheduled days from `job_day_dates`
               Row(
                 children: [
                   _buildJobDetailItem(
                     context,
                     Icons.calendar_today_outlined,
-                    job.formattedDateRange ?? job.formattedDate,
+                    job.formattedJobDayDatesLine,
                   ),
+                  
+                ],
+              ),
+              SizedBox(height: ScreenUnitUtil.getSpacing(8)),
+              Row(
+                children: [
                   if (job.numberOfDays != null && job.numberOfDays! > 0) ...[
-                    SizedBox(width: ScreenUnitUtil.getSpacing(16)),
+                    // SizedBox(width: ScreenUnitUtil.getSpacing(16)),
                     _buildJobDetailItem(
                       context,
                       Icons.date_range_outlined,
                       '${job.numberOfDays} day${job.numberOfDays! > 1 ? 's' : ''}',
                     ),
                   ],
-                ],
+                ]
               ),
               if (showDuration && (job.jobDuration != null && job.jobDuration!.isNotEmpty)) ...[
                 SizedBox(height: ScreenUnitUtil.getSpacing(8)),
@@ -320,33 +281,6 @@ class JobCard extends StatelessWidget {
                   ],
                 ),
               ],
-              // // Shift type (day/night) when available
-              // if (job.shiftType != null && job.shiftType!.isNotEmpty) ...[
-              //   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-              //   Row(
-              //     children: [
-              //       _buildJobDetailItem(
-              //         context,
-              //         Icons.wb_sunny_outlined,
-              //         _formatShiftType(job.shiftType!),
-              //       ),
-              //     ],
-              //   ),
-              // ],
-              
-              // // Posted Date (for Explore screen)
-              // if (showPostedDate && job.createdAt != null && onFormatDateTime != null) ...[
-              //   SizedBox(height: ScreenUnitUtil.getSpacing(8)),
-              //   Row(
-              //     children: [
-              //       _buildJobDetailItem(
-              //         context,
-              //         Icons.schedule_outlined,
-              //         'Posted ${onFormatDateTime!(job.createdAt!)}',
-              //       ),
-              //     ],
-              //   ),
-              // ],
               
               // Check-in or Check-out Button (only for Home screen)
               if ((showCheckInButton || showCheckOutButton) && viewModel != null && applicationData != null) ...[

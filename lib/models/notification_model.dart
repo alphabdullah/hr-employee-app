@@ -57,9 +57,6 @@ class NotificationModel {
       try {
         final dateStr = json['created_at'].toString();
         timestamp = DateTime.parse(dateStr);
-        if (timestamp.isUtc) {
-          timestamp = timestamp.toLocal();
-        }
       } catch (e) {
         // Fallback to now if parsing fails
       }

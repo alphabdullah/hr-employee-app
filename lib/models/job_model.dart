@@ -112,13 +112,11 @@ class JobModel {
         status = JobStatus.open;
     }
 
-    // Parse job_date and convert to local timezone
+    // Parse job_date as provided by backend
     DateTime jobDate;
     if (json['job_date'] != null) {
       try {
-        final parsedDate = DateTime.parse(json['job_date']);
-        // Convert to local timezone if it's in UTC
-        jobDate = parsedDate.isUtc ? parsedDate.toLocal() : parsedDate;
+        jobDate = DateTime.parse(json['job_date'].toString());
       } catch (e) {
         jobDate = DateTime.now();
       }
@@ -170,73 +168,9 @@ class JobModel {
       }
     }
 
-    // Convert time strings from UTC/server timezone to local timezone
-    String? convertTimeToLocal(String? timeString) {
-      if (timeString == null || timeString.isEmpty) {
-        return null;
-      }
-      
-      try {
-        // Parse time string (format: "HH:mm" or "HH:mm:ss")
-        final timeParts = timeString.split(':');
-        if (timeParts.length < 2) {
-          return timeString; // Return original if can't parse
-        }
-        
-        final hour = int.parse(timeParts[0]);
-        final minute = int.parse(timeParts[1]);
-        
-        // Create a DateTime in UTC (assuming backend sends times in UTC)
-        // Use today's date for conversion
-        final now = DateTime.now();
-        final utcDateTime = DateTime.utc(
-          now.year,
-          now.month,
-          now.day,
-          hour,
-          minute,
-        );
-        
-        // Convert to local time
-        final localDateTime = utcDateTime.toLocal();
-        
-        // Format time string in local timezone
-        final localTimeString = '${localDateTime.hour.toString().padLeft(2, '0')}:${localDateTime.minute.toString().padLeft(2, '0')}';
-        
-        // Log conversion for debugging
-        if (localTimeString != timeString) {
-          print('[JobModel] Time converted: $timeString (UTC) -> $localTimeString (Local, ${now.timeZoneName})');
-        }
-        
-        return localTimeString;
-      } catch (e) {
-        // If parsing fails, return original time string
-        print('[JobModel] Failed to convert time "$timeString": $e');
-        return timeString;
-      }
-    }
-    
-    // Convert ISO 8601 datetime strings from UTC to local timezone
-    String? convertDateTimeToLocal(String? dateTimeString) {
-      if (dateTimeString == null || dateTimeString.isEmpty) {
-        return null;
-      }
-      
-      try {
-        // Parse the datetime string (assuming ISO 8601 format)
-        final parsedDateTime = DateTime.parse(dateTimeString);
-        
-        // Convert to local timezone if it's in UTC
-        final localDateTime = parsedDateTime.isUtc ? parsedDateTime.toLocal() : parsedDateTime;
-        
-        // Return as ISO 8601 string in local timezone
-        return localDateTime.toIso8601String();
-      } catch (e) {
-        // If parsing fails, return original string
-        print('[JobModel] Failed to convert datetime "$dateTimeString": $e');
-        return dateTimeString;
-      }
-    }
+    // Keep time/date parsing as-is (no UTC/local conversion)
+    String? convertTimeToLocal(String? timeString) => timeString;
+    String? convertDateTimeToLocal(String? dateTimeString) => dateTimeString;
     
     // job_location / address (e.g. /api/me/jobs returns address, region, district)
     final rawLocation = json['job_location'] ?? json['address'];
@@ -264,14 +198,12 @@ class JobModel {
     if (json['from_date'] != null) {
       try {
         fromDate = DateTime.parse(json['from_date'].toString());
-        if (fromDate.isUtc) fromDate = fromDate.toLocal();
       } catch (_) {}
     }
     DateTime? endDate;
     if (json['end_date'] != null) {
       try {
         endDate = DateTime.parse(json['end_date'].toString());
-        if (endDate.isUtc) endDate = endDate.toLocal();
       } catch (_) {}
     }
     final numberOfDays = json['number_of_days'] != null ? _parseInt(json['number_of_days'], 0) : null;
@@ -292,8 +224,7 @@ class JobModel {
         final value = e?.toString();
         if (value == null) return null;
         try {
-          final parsed = DateTime.parse(value);
-          return parsed.isUtc ? parsed.toLocal() : parsed;
+          return DateTime.parse(value);
         } catch (_) {
           return null;
         }
@@ -473,20 +404,16 @@ class JobModel {
     );
   }
 
-  /// Formatted date range (e.g. "Jan 30 - Feb 1, 2026") when job_day_dates exist
-  String? get formattedDateRange {
-    if (jobDayDates != null && jobDayDates!.length >= 2) {
+  /// All scheduled days from API `job_day_dates`, comma-separated (e.g. "12 Jun 2026, 13 Jun 2026, 17 Jun 2026").
+  /// Falls back to [formattedDate] when `job_day_dates` is missing.
+  String get formattedJobDayDatesLine {
+    if (jobDayDates != null && jobDayDates!.isNotEmpty) {
       final sorted = List<DateTime>.from(jobDayDates!)..sort();
-      final from = '${_getMonthName(sorted.first.month)} ${sorted.first.day}, ${sorted.first.year}';
-      final end = '${_getMonthName(sorted.last.month)} ${sorted.last.day}, ${sorted.last.year}';
-      return '$from - $end';
+      return sorted
+          .map((d) => '${_getMonthName(d.month)} ${d.day}, ${d.year}')
+          .join(', ');
     }
-    if (fromDate != null && endDate != null) {
-      final from = '${_getMonthName(fromDate!.month)} ${fromDate!.day}, ${fromDate!.year}';
-      final end = '${_getMonthName(endDate!.month)} ${endDate!.day}, ${endDate!.year}';
-      return '$from - $end';
-    }
-    return null;
+    return formattedDate;
   }
 
   /// Get formatted date string (e.g., "Today", "Tomorrow", "Dec 15, 2024")
@@ -539,8 +466,8 @@ class JobModel {
 
 class JobDayTime {
   final DateTime date; // yyyy-MM-dd (local date only)
-  final String startTime; // HH:mm
-  final String endTime; // HH:mm
+  final String? startTime; // HH:mm
+  final String? endTime; // HH:mm
   final String? startTimeInTimezone; // HH:mm
   final String? endTimeInTimezone; // HH:mm
   final String? startTimeUtc; // ISO string
@@ -548,21 +475,32 @@ class JobDayTime {
 
   JobDayTime({
     required this.date,
-    required this.startTime,
-    required this.endTime,
+    this.startTime,
+    this.endTime,
     this.startTimeInTimezone,
     this.endTimeInTimezone,
     this.startTimeUtc,
     this.endTimeUtc,
   });
 
+  /// True when API provided a non-empty start time (used for check-in window).
+  bool get hasScheduledStartTime =>
+      startTime != null && startTime!.trim().isNotEmpty;
+
+  static String? _optionalTime(dynamic v) {
+    if (v == null) return null;
+    final s = v.toString().trim();
+    if (s.isEmpty || s == 'null') return null;
+    return s;
+  }
+
   factory JobDayTime.fromJson(
     Map<String, dynamic> json, {
     DateTime? fallbackDate,
   }) {
     final dateStr = json['date']?.toString() ?? '';
-    final startTime = json['start_time']?.toString() ?? '';
-    final endTime = json['end_time']?.toString() ?? '';
+    final startTime = _optionalTime(json['start_time']);
+    final endTime = _optionalTime(json['end_time']);
     DateTime parsedDate;
     if (dateStr.isEmpty) {
       if (fallbackDate == null) {
@@ -576,22 +514,28 @@ class JobDayTime {
       date: DateTime(parsedDate.year, parsedDate.month, parsedDate.day),
       startTime: startTime,
       endTime: endTime,
-      startTimeInTimezone: json['start_time_in_timezone']?.toString(),
-      endTimeInTimezone: json['end_time_in_timezone']?.toString(),
+      startTimeInTimezone: _optionalTime(json['start_time_in_timezone']),
+      endTimeInTimezone: _optionalTime(json['end_time_in_timezone']),
       startTimeUtc: json['start_time_utc']?.toString(),
       endTimeUtc: json['end_time_utc']?.toString(),
     );
   }
 
   DateTime get startDateTime {
-    final parts = startTime.split(':');
+    if (!hasScheduledStartTime) {
+      return DateTime(date.year, date.month, date.day);
+    }
+    final parts = startTime!.split(':');
     final h = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
     final m = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
     return DateTime(date.year, date.month, date.day, h, m);
   }
 
   DateTime get endDateTime {
-    final parts = endTime.split(':');
+    if (endTime == null || endTime!.trim().isEmpty) {
+      return DateTime(date.year, date.month, date.day, 23, 59);
+    }
+    final parts = endTime!.split(':');
     final h = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 0 : 0;
     final m = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
     return DateTime(date.year, date.month, date.day, h, m);

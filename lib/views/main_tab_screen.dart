@@ -106,7 +106,10 @@ class _MainTabScreenState extends State<MainTabScreen> with WidgetsBindingObserv
   Future<void> _pollJobsOnce() async {
     if (!mounted || _isHandlingInvalidToken) return;
     try {
-      await context.read<JobViewModel>().loadMyJobs(forceRefresh: true);
+      await context.read<JobViewModel>().loadMyJobs(
+            forceRefresh: true,
+            silent: true,
+          );
       await context.read<JobViewModel>().fetchAttendance(silent: true);
     } catch (_) {
       // Ignore transient polling errors

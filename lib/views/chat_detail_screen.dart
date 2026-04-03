@@ -145,7 +145,52 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       itemCount: viewModel.messages.length,
                       itemBuilder: (context, index) {
                         final message = viewModel.messages[index];
-                        return _buildMessageBubble(context, message);
+                        final prevMessage =
+                            index > 0 ? viewModel.messages[index - 1] : null;
+
+                        final showDateHeader = prevMessage == null ||
+                            !_isSameDay(
+                              prevMessage.timestamp,
+                              message.timestamp,
+                            );
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (showDateHeader)
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: ScreenUnitUtil.getSpacing(12),
+                                ),
+                                child: Center(
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: ScreenUnitUtil.getSpacing(12),
+                                      vertical: ScreenUnitUtil.getSpacing(6),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer
+                                          .withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(
+                                        ScreenUnitUtil.getSpacing(20),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _formatMessageDate(message.timestamp),
+                                      style: TextStyle(
+                                        fontSize: ScreenUnitUtil.getFontSize(12),
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            _buildMessageBubble(context, message),
+                          ],
+                        );
                       },
                     ),
                   ),
@@ -417,13 +462,36 @@ Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
 }
 
   String _formatMessageTime(DateTime time) {
-    // Convert UTC time to local time
-    final localTime = time.toLocal();
-    final hour = localTime.hour;
-    final minute = localTime.minute.toString().padLeft(2, '0');
+    final hour = time.hour;
+    final minute = time.minute.toString().padLeft(2, '0');
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     return '$displayHour:$minute $period';
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatMessageDate(DateTime dateTime) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    final d = dateTime.day;
+    final m = months[dateTime.month - 1];
+    final y = dateTime.year;
+    return '$d $m $y';
   }
 
   Widget _buildAvatar(String? profileImageUrl, bool isMe, {bool isAdmin = false}) {

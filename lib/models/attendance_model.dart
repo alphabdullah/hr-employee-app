@@ -27,7 +27,7 @@ class AttendanceModel {
       if (dateString == null || dateString.isEmpty) return null;
       try {
         final parsed = DateTime.parse(dateString);
-        return parsed.isUtc ? parsed.toLocal() : parsed;
+        return parsed;
       } catch (_) {
         return null;
       }
