@@ -5,6 +5,7 @@ import '../models/registration_progress_model.dart';
 import '../services/api_client.dart';
 import '../services/api_endpoints.dart';
 import '../services/auth_service.dart';
+import '../services/cache_service.dart';
 
 /// ViewModel for Login screen following MVVM pattern
 class LoginViewModel extends ChangeNotifier {
@@ -100,6 +101,7 @@ class LoginViewModel extends ChangeNotifier {
         debugPrint('[LoginViewModel] Login response token: $token');
 
         if (token != null && token.isNotEmpty) {
+          final previousEmployeeId = await AuthService.getEmployeeId();
           final userStatus = userData?['status']?.toString().toLowerCase().trim();
 
           // Save token ALWAYS - needed for API calls even when status is pending
@@ -115,6 +117,13 @@ class LoginViewModel extends ChangeNotifier {
           if (userData != null) {
             final employeeId = userData['id']?.toString();
             if (employeeId != null) {
+              if (previousEmployeeId != null &&
+                  previousEmployeeId.isNotEmpty &&
+                  previousEmployeeId != employeeId) {
+                // Different user logged in on same device; clear stale caches
+                // so previous user's jobs/profile don't flash on screen.
+                await CacheService.clearAll();
+              }
               await AuthService.saveEmployeeId(employeeId);
             }
           }

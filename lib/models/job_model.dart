@@ -124,14 +124,16 @@ class JobModel {
       jobDate = DateTime.now();
     }
 
-    // Handle job_image / image_url (e.g. /api/me/jobs returns image_url)
-    final jobImage = json['job_image'] ?? json['image_url'];
-    final String? jobImageUrl;
-    if (jobImage == null || jobImage == 'null' || jobImage.toString().isEmpty) {
-      jobImageUrl = null;
-    } else {
-      jobImageUrl = jobImage.toString();
+    // Handle job_image / image_url (prefer non-empty image_url first).
+    String? _normalizeImage(dynamic value) {
+      if (value == null) return null;
+      final v = value.toString().trim();
+      if (v.isEmpty || v == 'null') return null;
+      return v;
     }
+
+    final jobImageUrl =
+        _normalizeImage(json['image_url']) ?? _normalizeImage(json['job_image']);
 
     // Handle created_by / client object (e.g. /api/me/jobs returns client)
     Map<String, dynamic>? createdBy;

@@ -52,6 +52,26 @@ class JobViewModel extends ChangeNotifier {
   
   /// Get all applications (for Job History)
   List<ApplicationData> get allApplications => _myApplications;
+
+  /// Clears all in-memory job/applications state for current runtime session.
+  /// Use this on logout or before switching to another account.
+  void clearSessionState({bool notify = true}) {
+    _jobs = [];
+    _errorMessage = null;
+    _isCheckedIn = false;
+    _applicationStatuses.clear();
+    _myApplications = [];
+    _isLoading = false;
+    _isLoadingApplications = false;
+    _hasLoadedApplications = false;
+    _isCheckingIn = false;
+    _isCheckingOut = false;
+    _attendanceRecords = [];
+    _isLoadingAttendance = false;
+    if (notify) {
+      notifyListeners();
+    }
+  }
   
   /// Check if user has applied to a specific job
   bool hasAppliedToJob(String jobId) {
@@ -515,9 +535,12 @@ class JobViewModel extends ChangeNotifier {
   /// Load user's jobs from /api/me/jobs
   /// [silent]: no loading flag / no spinner; for polling, only [notifyListeners] if data changed.
   Future<void> loadMyJobs({bool forceRefresh = false, bool silent = false}) async {
+    final currentEmployeeId = await AuthService.getEmployeeId();
     // Try disk cache first
     if (!forceRefresh && _myApplications.isEmpty) {
-      final cachedApplications = await CacheService.loadApplications();
+      final cachedApplications = await CacheService.loadApplications(
+        ownerId: currentEmployeeId,
+      );
       if (cachedApplications != null && cachedApplications.isNotEmpty) {
         try {
           _applicationStatuses.clear();
@@ -618,7 +641,10 @@ class JobViewModel extends ChangeNotifier {
           }
 
           if (applicationsForCache.isNotEmpty) {
-            await CacheService.saveApplications(applicationsForCache);
+            await CacheService.saveApplications(
+              applicationsForCache,
+              ownerId: currentEmployeeId,
+            );
           }
           if (!silent || !_applicationsUnchanged(beforeSnapshot, _myApplications)) {
             notifyListeners();
@@ -691,7 +717,11 @@ class JobViewModel extends ChangeNotifier {
           }
 
           if (applicationsForCache.isNotEmpty) {
-            await CacheService.saveApplications(applicationsForCache);
+            final currentEmployeeId = await AuthService.getEmployeeId();
+            await CacheService.saveApplications(
+              applicationsForCache,
+              ownerId: currentEmployeeId,
+            );
           }
           notifyListeners();
         }

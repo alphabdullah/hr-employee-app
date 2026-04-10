@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/login_viewmodel.dart';
 import '../viewmodels/signup_viewmodel.dart';
+import '../viewmodels/job_viewmodel.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
 import '../resources/components/primary_button.dart';
@@ -335,6 +336,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       final success = await viewModel.login();
       if (success && mounted) {
+        // Prevent previous-account jobs from flashing before fresh fetch.
+        context.read<JobViewModel>().clearSessionState(notify: true);
         // Show success message
         // Wait a bit for toast to show, then navigate
         await Future.delayed(const Duration(milliseconds: 500));

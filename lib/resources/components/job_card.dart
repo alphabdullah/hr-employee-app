@@ -6,6 +6,7 @@ import '../../resources/app_colors.dart';
 import '../../routes/app_router.dart';
 import '../../routes/route_names.dart';
 import '../../utils/toast_message.dart';
+import '../../services/api_endpoints.dart';
 
 /// Reusable Job Card Widget
 /// Used in Home screen and Job History screen
@@ -83,6 +84,9 @@ class JobCard extends StatelessWidget {
                             _getImageUrl(job.jobImageUrl!),
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
+                              debugPrint(
+                                '[JobCard Image] failed url=${_getImageUrl(job.jobImageUrl!)} error=$error',
+                              );
                               return _buildImagePlaceholder();
                             },
                           )
@@ -521,12 +525,12 @@ class JobCard extends StatelessWidget {
 
   /// Get full image URL (handle relative paths)
   String _getImageUrl(String imageUrl) {
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl;
-    } else {
-      // Prepend base URL for relative paths
-      return 'https://hr.aibitsoft.cloud$imageUrl';
+    final value = imageUrl.trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
     }
+    final normalizedPath = value.startsWith('/') ? value : '/$value';
+    return Uri.parse(ApiEndpoints.baseUrl).resolve(normalizedPath).toString();
   }
 
   /// Build image placeholder when no image is available

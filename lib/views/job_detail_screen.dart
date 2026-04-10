@@ -7,6 +7,7 @@ import '../viewmodels/job_viewmodel.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
 import '../utils/toast_message.dart';
+import '../services/api_endpoints.dart';
 
 /// Job Detail Screen - Shows full job details and allows user to apply
 class JobDetailScreen extends StatefulWidget {
@@ -69,6 +70,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       _getImageUrl(widget.job.jobImageUrl!),
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
+                        debugPrint(
+                          '[JobDetail Image] failed url=${_getImageUrl(widget.job.jobImageUrl!)} error=$error',
+                        );
                         return _buildImagePlaceholder();
                       },
                     )
@@ -1011,12 +1015,12 @@ String _buildPayText(JobModel job) {
 
   /// Get full image URL (handle relative paths)
   String _getImageUrl(String imageUrl) {
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl;
-    } else {
-      // Prepend base URL for relative paths
-      return 'https://hr.aibitsoft.cloud$imageUrl';
+    final value = imageUrl.trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
     }
+    final normalizedPath = value.startsWith('/') ? value : '/$value';
+    return Uri.parse(ApiEndpoints.baseUrl).resolve(normalizedPath).toString();
   }
 
   /// Build attendance card showing punch in/out times and hours worked

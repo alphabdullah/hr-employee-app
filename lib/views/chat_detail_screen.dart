@@ -4,6 +4,7 @@ import '../viewmodels/chat_detail_viewmodel.dart';
 import '../models/message_model.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
+import '../services/api_endpoints.dart';
 
 /// Chat Detail Screen View for group conversations
 class ChatDetailScreen extends StatefulWidget {
@@ -548,8 +549,7 @@ Widget _buildMessageInput(BuildContext context, ChatDetailViewModel viewModel) {
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return imageUrl;
     } else {
-      // Prepend base URL for relative paths
-      return 'https://hr.aibitsoft.cloud$imageUrl';
+      return '${ApiEndpoints.baseUrl}$imageUrl';
     }
   }
 
