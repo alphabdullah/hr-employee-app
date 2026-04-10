@@ -73,12 +73,9 @@ class AuthService {
   static Future<bool> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_tokenKey);
-      await prefs.remove(_employeeIdKey);
-      await prefs.setBool(_isLoggedInKey, false);
-      await prefs.remove(_userStatusKey);
-      await prefs.remove(_registrationProgressKey);
-      // Clear all cached data on logout
+      // User requested full local reset on logout.
+      await prefs.clear();
+      // Keep explicit cache cleanup for any non-SharedPreferences stores.
       await CacheService.clearAll();
       return true;
     } catch (e) {
@@ -158,11 +155,8 @@ class AuthService {
   static Future<bool> clearAll() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_tokenKey);
-      await prefs.remove(_employeeIdKey);
-      await prefs.remove(_isLoggedInKey);
-      await prefs.remove(_userStatusKey);
-      await prefs.remove(_registrationProgressKey);
+      // Full wipe of all local preferences.
+      await prefs.clear();
       // Clear all cached data
       await CacheService.clearAll();
       return true;

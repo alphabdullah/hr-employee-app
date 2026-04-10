@@ -10,6 +10,7 @@ class CacheService {
   static const String _skillsCacheKey = 'cached_skills';
   static const String _profileCacheTimestampKey = 'profile_cache_timestamp';
   static const String _applicationsCacheTimestampKey = 'applications_cache_timestamp';
+  static const String _applicationsCacheOwnerKey = 'applications_cache_owner';
   static const String _skillsCacheTimestampKey = 'skills_cache_timestamp';
   
   // Chat messages cache (per chat ID)
@@ -71,11 +72,19 @@ class CacheService {
   }
 
   /// Save applications data to cache
-  static Future<bool> saveApplications(List<Map<String, dynamic>> applications) async {
+  static Future<bool> saveApplications(
+    List<Map<String, dynamic>> applications, {
+    String? ownerId,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_applicationsCacheKey, jsonEncode(applications));
       await prefs.setInt(_applicationsCacheTimestampKey, DateTime.now().millisecondsSinceEpoch);
+      if (ownerId != null && ownerId.isNotEmpty) {
+        await prefs.setString(_applicationsCacheOwnerKey, ownerId);
+      } else {
+        await prefs.remove(_applicationsCacheOwnerKey);
+      }
       return true;
     } catch (e) {
       return false;
@@ -83,13 +92,26 @@ class CacheService {
   }
 
   /// Load applications data from cache
-  static Future<List<Map<String, dynamic>>?> loadApplications() async {
+  static Future<List<Map<String, dynamic>>?> loadApplications({
+    String? ownerId,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cachedData = prefs.getString(_applicationsCacheKey);
       
       if (cachedData == null) {
         return null;
+      }
+
+      // Prevent showing another user's cached jobs.
+      if (ownerId != null && ownerId.isNotEmpty) {
+        final cachedOwner = prefs.getString(_applicationsCacheOwnerKey);
+        if (cachedOwner != null &&
+            cachedOwner.isNotEmpty &&
+            cachedOwner != ownerId) {
+          await clearApplications();
+          return null;
+        }
       }
 
       // Check if cache is expired
@@ -116,6 +138,7 @@ class CacheService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_applicationsCacheKey);
       await prefs.remove(_applicationsCacheTimestampKey);
+      await prefs.remove(_applicationsCacheOwnerKey);
       return true;
     } catch (e) {
       return false;

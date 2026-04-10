@@ -6,8 +6,8 @@
 
 class ApiEndpoints {
   // Base URL
-  static const String baseUrl = 'https://hr.aibitsoft.cloud';
-
+  // static const String baseUrl = 'https://hr.aibitsoft.cloud';
+  static const String baseUrl = 'https://hr.aibit.services';
   // ============================================================================
   // AUTHENTICATION ENDPOINTS
   // ============================================================================

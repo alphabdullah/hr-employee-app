@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/settings_viewmodel.dart';
+import '../viewmodels/job_viewmodel.dart';
 import '../utils/screen_unit_util.dart';
 import '../resources/app_colors.dart';
 import '../routes/app_router.dart';
@@ -438,6 +439,9 @@ class SettingsScreen extends StatelessWidget {
       
       // Always clear local authentication data immediately
       await AuthService.logout();
+      if (context.mounted) {
+        context.read<JobViewModel>().clearSessionState(notify: false);
+      }
       
       // Navigate to login screen immediately (don't wait for API)
       if (context.mounted) {
@@ -457,6 +461,9 @@ class SettingsScreen extends StatelessWidget {
     } catch (e) {
       // Error occurred, but still logout locally
       await AuthService.logout();
+      if (context.mounted) {
+        context.read<JobViewModel>().clearSessionState(notify: false);
+      }
       
       if (context.mounted) {
         // Navigate to login screen
